@@ -81,11 +81,11 @@ def get_args_parser():
                         help='Color jitter factor (enabled only when not using Auto/RandAug)')
     parser.add_argument('--aa', type=str, default='rand-m9-mstd0.5-inc1', metavar='NAME',
                         help='Use AutoAugment policy. "v0" or "original". " + "(default: rand-m9-mstd0.5-inc1)'),
-    parser.add_argument('--smoothing', type=float, default=0.1,
+    parser.add_argument('--smoothing', type=float, default=0.0,
                         help='Label smoothing (default: 0.1)')
 
     # * Random Erase params
-    parser.add_argument('--reprob', type=float, default=0.25, metavar='PCT',
+    parser.add_argument('--reprob', type=float, default=0.0, metavar='PCT',
                         help='Random erase prob (default: 0.25)')
     parser.add_argument('--remode', type=str, default='pixel',
                         help='Random erase mode (default: "pixel")')
@@ -101,9 +101,9 @@ def get_args_parser():
                         help='cutmix alpha, cutmix enabled if > 0.')
     parser.add_argument('--cutmix_minmax', type=float, nargs='+', default=None,
                         help='cutmix min/max ratio, overrides alpha and enables cutmix if set (default: None)')
-    parser.add_argument('--mixup_prob', type=float, default=1.0,
+    parser.add_argument('--mixup_prob', type=float, default=0.0,
                         help='Probability of performing mixup or cutmix when either/both is enabled')
-    parser.add_argument('--mixup_switch_prob', type=float, default=0.5,
+    parser.add_argument('--mixup_switch_prob', type=float, default=0.0,
                         help='Probability of switching to cutmix when both mixup and cutmix enabled')
     parser.add_argument('--mixup_mode', type=str, default='batch',
                         help='How to apply mixup/cutmix params. Per "batch", "pair", or "elem"')
