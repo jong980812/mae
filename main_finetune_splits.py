@@ -85,7 +85,7 @@ def get_args_parser():
                         help='Label smoothing (default: 0.1)')
 
     # * Random Erase params
-    parser.add_argument('--reprob', type=float, default=0.25, metavar='PCT',
+    parser.add_argument('--reprob', type=float, default=0.0, metavar='PCT',
                         help='Random erase prob (default: 0.25)')
     parser.add_argument('--remode', type=str, default='pixel',
                         help='Random erase mode (default: "pixel")')
@@ -101,9 +101,9 @@ def get_args_parser():
                         help='cutmix alpha, cutmix enabled if > 0.')
     parser.add_argument('--cutmix_minmax', type=float, nargs='+', default=None,
                         help='cutmix min/max ratio, overrides alpha and enables cutmix if set (default: None)')
-    parser.add_argument('--mixup_prob', type=float, default=1.0,
+    parser.add_argument('--mixup_prob', type=float, default=0.0,
                         help='Probability of performing mixup or cutmix when either/both is enabled')
-    parser.add_argument('--mixup_switch_prob', type=float, default=0.5,
+    parser.add_argument('--mixup_switch_prob', type=float, default=0.0,
                         help='Probability of switching to cutmix when both mixup and cutmix enabled')
     parser.add_argument('--mixup_mode', type=str, default='batch',
                         help='How to apply mixup/cutmix params. Per "batch", "pair", or "elem"')
@@ -128,7 +128,7 @@ def get_args_parser():
                         help='path where to tensorboard log')
     parser.add_argument('--device', default='cuda',
                         help='device to use for training / testing')
-    parser.add_argument('--seed', default=0, type=int)
+    parser.add_argument('--seed', default=777, type=int)
     parser.add_argument('--resume', default='',
                         help='resume from checkpoint')
 
@@ -154,12 +154,15 @@ def get_args_parser():
 
     
     #! custom argument
+    parser.add_argument('--split_path',default=None,type=str,help='data_path must have data splits')
     parser.add_argument('--save_ckpt_freq', default=10, type=int,help='체크 포인트 저장 주기')
+    parser.add_argument('--first_split',default=True,type=bool)
     return parser
 
 
 def main(args):
-    misc.init_distributed_mode(args)
+    if args.first_split:
+        misc.init_distributed_mode(args)
 
     print('job dir: {}'.format(os.path.dirname(os.path.realpath(__file__))))
     print("{}".format(args).replace(', ', ',\n'))
@@ -349,11 +352,29 @@ def main(args):
     total_time = time.time() - start_time
     total_time_str = str(datetime.timedelta(seconds=int(total_time)))
     print('Training time {}'.format(total_time_str))
-
+    return test_stats['acc1']
 
 if __name__ == '__main__':
     args = get_args_parser()
     args = args.parse_args()
-    if args.output_dir:
-        Path(args.output_dir).mkdir(parents=True, exist_ok=True)
-    main(args)
+    
+    super_data_path=args.data_path    #! save original data path
+    super_output_dir=args.output_dir  #! save origianl out path
+    sub_data_path=os.listdir(super_data_path)   #! get list about splits folder name
+    accs=[]
+    print(f"len(sub_data_path) datasets training starts\n\n")
+    for split_number,split_path in enumerate(sub_data_path):
+        if split_number>0:
+            args.first_split=False
+        args.data_path=os.path.join(super_data_path,split_path)
+        args.output_dir=os.path.join(super_output_dir,split_path)
+        if args.output_dir:
+            Path(args.output_dir).mkdir(parents=True, exist_ok=True)
+        print("\n\n********************************************")
+        print(f"{split_number}th model training start!\nData Dir: {args.data_path}")
+        test_acc1=main(args)
+        accs.append(test_acc1)
+        with open(os.path.join(super_output_dir, "Total_acc.txt"), mode="a", encoding="utf-8") as f:
+            f.write(f"{split_number} final Top 1 acc: {test_acc1}\n")
+    with open(os.path.join(super_output_dir, "Total_acc.txt"), mode="a", encoding="utf-8") as f:
+        f.write(f"Average Acc : {sum(accs)/len(accs)}\n")
