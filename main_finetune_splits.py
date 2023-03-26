@@ -151,7 +151,7 @@ def get_args_parser():
     parser.add_argument('--dist_on_itp', action='store_true')
     parser.add_argument('--dist_url', default='env://',
                         help='url used to set up distributed training')
-
+    parser.add_argument('--max_acc', action='store_true')
     
     #! custom argument
     parser.add_argument('--split_path',default=None,type=str,help='data_path must have data splits')
@@ -352,7 +352,7 @@ def main(args):
     total_time = time.time() - start_time
     total_time_str = str(datetime.timedelta(seconds=int(total_time)))
     print('Training time {}'.format(total_time_str))
-    return max_accuracy
+    return max_accuracy if args.max_acc else test_stats['acc1']
 
 if __name__ == '__main__':
     args = get_args_parser()
