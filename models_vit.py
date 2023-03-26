@@ -15,7 +15,7 @@ import torch
 import torch.nn as nn
 
 import timm.models.vision_transformer
-
+import timm
 
 class VisionTransformer(timm.models.vision_transformer.VisionTransformer):
     """ Vision Transformer with support for global average pooling
@@ -71,4 +71,7 @@ def vit_huge_patch14(**kwargs):
     model = VisionTransformer(
         patch_size=14, embed_dim=1280, depth=32, num_heads=16, mlp_ratio=4, qkv_bias=True,
         norm_layer=partial(nn.LayerNorm, eps=1e-6), **kwargs)
+    return model
+def original_vit(**kwargs):
+    model = timm.create_model('vit_base_patch16_224',pretrained=True,num_classes=2,**kwargs)
     return model

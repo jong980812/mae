@@ -109,7 +109,7 @@ def get_args_parser():
                         help='How to apply mixup/cutmix params. Per "batch", "pair", or "elem"')
 
     # * Finetuning params
-    parser.add_argument('--finetune', default='',
+    parser.add_argument('--finetune', default=None,
                         help='finetune from checkpoint')
     parser.add_argument('--global_pool', action='store_true')
     parser.set_defaults(global_pool=True)
@@ -151,12 +151,12 @@ def get_args_parser():
     parser.add_argument('--dist_on_itp', action='store_true')
     parser.add_argument('--dist_url', default='env://',
                         help='url used to set up distributed training')
-    parser.add_argument('--max_acc', action='store_true')
     
     #! custom argument
     parser.add_argument('--split_path',default=None,type=str,help='data_path must have data splits')
     parser.add_argument('--save_ckpt_freq', default=10, type=int,help='체크 포인트 저장 주기')
     parser.add_argument('--first_split',default=True,type=bool)
+    parser.add_argument('--max_acc', action='store_true')#max acc사용할때
     return parser
 
 
@@ -229,12 +229,17 @@ def main(args):
             mixup_alpha=args.mixup, cutmix_alpha=args.cutmix, cutmix_minmax=args.cutmix_minmax,
             prob=args.mixup_prob, switch_prob=args.mixup_switch_prob, mode=args.mixup_mode,
             label_smoothing=args.smoothing, num_classes=args.nb_classes)
-    
-    model = models_vit.__dict__[args.model](
+    if args.model == 'original_vit':
+        model= models_vit.__dict__[args.model](
+        drop_path_rate=args.drop_path,
+        )
+        assert args.finetune is None, "Original vit has already pretrained weight"
+    else:
+        model = models_vit.__dict__[args.model](
         num_classes=args.nb_classes,
         drop_path_rate=args.drop_path,
         global_pool=args.global_pool,
-    )
+        )
 
     if args.finetune and not args.eval:
         checkpoint = torch.load(args.finetune, map_location='cpu')
