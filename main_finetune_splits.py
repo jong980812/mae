@@ -383,3 +383,4 @@ if __name__ == '__main__':
             f.write(f"{split_path} final Top 1 acc: {test_acc1}\n")
     with open(os.path.join(super_output_dir, "Total_acc.txt"), mode="a", encoding="utf-8") as f:
         f.write(f"Average Acc : {sum(accs)/len(accs)}\n")
+    print(1)
