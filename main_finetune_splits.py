@@ -352,7 +352,7 @@ def main(args):
     total_time = time.time() - start_time
     total_time_str = str(datetime.timedelta(seconds=int(total_time)))
     print('Training time {}'.format(total_time_str))
-    return test_stats['acc1']
+    return max_accuracy
 
 if __name__ == '__main__':
     args = get_args_parser()
@@ -371,10 +371,10 @@ if __name__ == '__main__':
         if args.output_dir:
             Path(args.output_dir).mkdir(parents=True, exist_ok=True)
         print("\n\n********************************************")
-        print(f"{split_number}th model training start!\nData Dir: {args.data_path}")
+        print(f"{split_path}th model training start!\nData Dir: {args.data_path}")
         test_acc1=main(args)
         accs.append(test_acc1)
         with open(os.path.join(super_output_dir, "Total_acc.txt"), mode="a", encoding="utf-8") as f:
-            f.write(f"{split_number} final Top 1 acc: {test_acc1}\n")
+            f.write(f"{split_path} final Top 1 acc: {test_acc1}\n")
     with open(os.path.join(super_output_dir, "Total_acc.txt"), mode="a", encoding="utf-8") as f:
         f.write(f"Average Acc : {sum(accs)/len(accs)}\n")
