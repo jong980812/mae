@@ -74,4 +74,5 @@ def vit_huge_patch14(**kwargs):
     return model
 def original_vit(**kwargs):
     model = timm.create_model('vit_base_patch16_224',pretrained=True,num_classes=2,**kwargs)
+    print("odododo")
     return model
