@@ -10,7 +10,7 @@
 # --------------------------------------------------------
 
 from functools import partial
-
+from torchvision import models
 import torch
 import torch.nn as nn
 
@@ -72,7 +72,52 @@ def vit_huge_patch14(**kwargs):
         patch_size=14, embed_dim=1280, depth=32, num_heads=16, mlp_ratio=4, qkv_bias=True,
         norm_layer=partial(nn.LayerNorm, eps=1e-6), **kwargs)
     return model
-def original_vit(**kwargs):
+def original_vit_base_patch16_224(**kwargs):
     model = timm.create_model('vit_base_patch16_224',pretrained=True,num_classes=2,**kwargs)
-    print("odododo")
     return model
+def original_vit_tiny_patch16_224(**kwargs):
+    model = timm.create_model('vit_tiny_patch16_224',pretrained=True,num_classes=2,**kwargs)
+    return model
+def original_vit_small_patch16_224(**kwargs):
+    model = timm.create_model('vit_small_patch16_224',pretrained=True,num_classes=2,**kwargs)
+    return model
+def original_vit_tiny_patch16_224_in21k(**kwargs):
+    model = timm.create_model('vit_tiny_patch16_224_in21k',pretrained=True,num_classes=2,**kwargs)
+    return model
+
+def resnet18(num_classes):
+    model = models.resnet18(pretrained=True)
+    in_ft = model.fc.in_features #모델의 마지막 fc layer in feature
+    model.fc = nn.Linear(in_ft,num_classes)
+    return model
+
+
+'''
+'vit_base_patch16_224', 
+'vit_base_patch16_224_in21k',
+'vit_base_patch16_224_miil',
+'vit_base_patch16_224_miil_in21k', 
+'vit_base_patch16_384',
+'vit_base_patch32_224', 
+'vit_base_patch32_224_in21k',
+'vit_base_patch32_384',
+'vit_base_r50_s16_224_in21k', 
+'vit_base_r50_s16_384',
+'vit_huge_patch14_224_in21k', 
+'vit_large_patch16_224',
+'vit_large_patch16_224_in21k', 
+'vit_large_patch16_384', 
+'vit_large_patch32_224_in21k',
+'vit_large_patch32_384',
+'vit_large_r50_s32_224',
+'vit_large_r50_s32_224_in21k', 'vit_large_r50_s32_384',
+'vit_small_patch16_224', 'vit_small_patch16_224_in21k', 
+'vit_small_patch16_384', 'vit_small_patch32_224', 
+'vit_small_patch32_224_in21k', 'vit_small_patch32_384', 
+'vit_small_r26_s32_224', 'vit_small_r26_s32_224_in21k',
+'vit_small_r26_s32_384', 'vit_tiny_patch16_224',
+'vit_tiny_patch16_224_in21k', 'vit_tiny_patch16_384', 
+'vit_tiny_r_s16_p8_224', 'vit_tiny_r_s16_p8_224_in21k', 
+'vit_tiny_r_s16_p8_384', 'wide_resnet50_2', 'wide_resnet101_2', 
+'xception', 'xception41', 'xception65', 'xception71']
+'''

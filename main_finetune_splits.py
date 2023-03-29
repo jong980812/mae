@@ -23,7 +23,7 @@ from torch.utils.tensorboard import SummaryWriter
 
 import timm
 
-assert timm.__version__ == "0.3.2" # version check
+# assert timm.__version__ == "0.3.2" # version check
 from timm.models.layers import trunc_normal_
 from timm.data.mixup import Mixup
 from timm.loss import LabelSmoothingCrossEntropy, SoftTargetCrossEntropy
@@ -229,11 +229,18 @@ def main(args):
             mixup_alpha=args.mixup, cutmix_alpha=args.cutmix, cutmix_minmax=args.cutmix_minmax,
             prob=args.mixup_prob, switch_prob=args.mixup_switch_prob, mode=args.mixup_mode,
             label_smoothing=args.smoothing, num_classes=args.nb_classes)
-    if args.model == 'original_vit':
+    if  'original_vit' in args.model:
         model= models_vit.__dict__[args.model](
         drop_path_rate=args.drop_path,
         )
+        trunc_normal_(model.head.weight, std=2e-5)
         assert args.finetune is None, "Original vit has already pretrained weight"
+    elif 'resnet' in args.model:
+        model= models_vit.__dict__[args.model](
+        num_classes=args.nb_classes
+        )
+        trunc_normal_(model.fc.weight, std=2e-5)
+        
     else:
         model = models_vit.__dict__[args.model](
         num_classes=args.nb_classes,
@@ -291,11 +298,17 @@ def main(args):
         model_without_ddp = model.module
 
     # build optimizer with layer-wise lr decay (lrd)
-    param_groups = lrd.param_groups_lrd(model_without_ddp, args.weight_decay,
-        no_weight_decay_list=model_without_ddp.no_weight_decay(),
-        layer_decay=args.layer_decay
-    )
-    optimizer = torch.optim.AdamW(param_groups, lr=args.lr)
+    if 'resnet' in args.model:
+        params_to_update = model.parameters()
+        optimizer = torch.optim.SGD(params_to_update, lr=args.lr, momentum=0.9)
+        
+    else:
+
+        param_groups = lrd.param_groups_lrd(model_without_ddp, args.weight_decay,
+            no_weight_decay_list=model_without_ddp.no_weight_decay(),
+            layer_decay=args.layer_decay
+        )
+        optimizer = torch.optim.AdamW(param_groups, lr=args.lr)
     loss_scaler = NativeScaler()
 
     if mixup_fn is not None:
@@ -383,4 +396,3 @@ if __name__ == '__main__':
             f.write(f"{split_path} final Top 1 acc: {test_acc1}\n")
     with open(os.path.join(super_output_dir, "Total_acc.txt"), mode="a", encoding="utf-8") as f:
         f.write(f"Average Acc : {sum(accs)/len(accs)}\n")
-    print(1)
