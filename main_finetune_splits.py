@@ -33,7 +33,7 @@ import util.misc as misc
 from util.datasets import build_dataset
 from util.pos_embed import interpolate_pos_embed
 from util.misc import NativeScalerWithGradNormCount as NativeScaler
-
+from util.visualizer import plot_acc_data,plot_loss_data
 import models_vit
 
 from engine_finetune import train_one_epoch, evaluate
@@ -223,6 +223,7 @@ def main(args):
 
     mixup_fn = None
     mixup_active = args.mixup > 0 or args.cutmix > 0. or args.cutmix_minmax is not None
+
     if mixup_active:
         print("Mixup is activated!")
         mixup_fn = Mixup(
@@ -231,10 +232,12 @@ def main(args):
             label_smoothing=args.smoothing, num_classes=args.nb_classes)
     if  'original_vit' in args.model:
         model= models_vit.__dict__[args.model](
+        pretrained=True if args.finetune is None else False,
+        num_classes=args.nb_classes,
         drop_path_rate=args.drop_path,
         )
         trunc_normal_(model.head.weight, std=2e-5)
-        assert args.finetune is None, "Original vit has already pretrained weight"
+        # assert args.finetune is None, "Original vit has already pretrained weight"
     elif 'resnet' in args.model:
         model= models_vit.__dict__[args.model](
         num_classes=args.nb_classes
@@ -331,6 +334,8 @@ def main(args):
     print(f"Start training for {args.epochs} epochs")
     start_time = time.time()
     max_accuracy = 0.0
+    super_output_dir=os.path.abspath(os.path.join(args.output_dir, os.pardir))
+    txt_dir=os.path.join(super_output_dir, f"{args.split_path}_log.txt")
     for epoch in range(args.start_epoch, args.epochs):
         if args.distributed:
             data_loader_train.sampler.set_epoch(epoch)
@@ -364,12 +369,14 @@ def main(args):
         if args.output_dir and misc.is_main_process():
             if log_writer is not None:
                 log_writer.flush()
-            with open(os.path.join(args.output_dir, "log.txt"), mode="a", encoding="utf-8") as f:
+            with open(txt_dir, mode="a", encoding="utf-8") as f:
                 f.write(json.dumps(log_stats) + "\n")
 
     total_time = time.time() - start_time
     total_time_str = str(datetime.timedelta(seconds=int(total_time)))
     print('Training time {}'.format(total_time_str))
+    plot_acc_data(txt_dir,super_output_dir,args.split_path)
+    plot_loss_data(txt_dir,super_output_dir,args.split_path)
     return max_accuracy if args.max_acc else test_stats['acc1']
 
 if __name__ == '__main__':
@@ -378,11 +385,11 @@ if __name__ == '__main__':
     
     super_data_path=args.data_path    #! save original data path
     super_output_dir=args.output_dir  #! save origianl out path
-    sub_data_path=os.listdir(super_data_path)   #! get list about splits folder name
+    sub_data_path=sorted(os.listdir(super_data_path))   #! get list about splits folder name
     accs=[]
-    print(f"len(sub_data_path) datasets training starts\n\n")
-    for split_number,split_path in enumerate(sub_data_path):
-        if split_number>0:
+    print(f"{len(sub_data_path)} datasets training starts\n\n")
+    for split_path in sub_data_path:
+        if int(split_path)>0:
             args.first_split=False
         args.data_path=os.path.join(super_data_path,split_path)
         args.output_dir=os.path.join(super_output_dir,split_path)
@@ -390,6 +397,7 @@ if __name__ == '__main__':
             Path(args.output_dir).mkdir(parents=True, exist_ok=True)
         print("\n\n********************************************")
         print(f"{split_path}th model training start!\nData Dir: {args.data_path}")
+        args.split_path = split_path
         test_acc1=main(args)
         accs.append(test_acc1)
         with open(os.path.join(super_output_dir, "Total_acc.txt"), mode="a", encoding="utf-8") as f:

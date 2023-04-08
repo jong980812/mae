@@ -23,7 +23,7 @@ from torch.utils.tensorboard import SummaryWriter
 
 import timm
 
-assert timm.__version__ == "0.3.2" # version check
+# assert timm.__version__ == "0.3.2" # version check
 from timm.models.layers import trunc_normal_
 from timm.data.mixup import Mixup
 from timm.loss import LabelSmoothingCrossEntropy, SoftTargetCrossEntropy
@@ -227,11 +227,25 @@ def main(args):
             prob=args.mixup_prob, switch_prob=args.mixup_switch_prob, mode=args.mixup_mode,
             label_smoothing=args.smoothing, num_classes=args.nb_classes)
     
-    model = models_vit.__dict__[args.model](
+    if  'original_vit' in args.model:
+        model= models_vit.__dict__[args.model](
+        drop_path_rate=args.drop_path,
+        )
+        trunc_normal_(model.head.weight, std=2e-5)
+        # assert args.finetune is None, "Original vit has already pretrained weight"
+    elif 'resnet' in args.model:
+        model= models_vit.__dict__[args.model](
+        num_classes=args.nb_classes
+        )
+        trunc_normal_(model.fc.weight, std=2e-5)
+        
+    else:
+        model = models_vit.__dict__[args.model](
         num_classes=args.nb_classes,
         drop_path_rate=args.drop_path,
         global_pool=args.global_pool,
-    )
+        )
+
 
     if args.finetune and not args.eval:
         checkpoint = torch.load(args.finetune, map_location='cpu')

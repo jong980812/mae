@@ -72,14 +72,14 @@ def vit_huge_patch14(**kwargs):
         patch_size=14, embed_dim=1280, depth=32, num_heads=16, mlp_ratio=4, qkv_bias=True,
         norm_layer=partial(nn.LayerNorm, eps=1e-6), **kwargs)
     return model
-def original_vit_base_patch16_224(**kwargs):
-    model = timm.create_model('vit_base_patch16_224',pretrained=True,num_classes=2,**kwargs)
+def original_vit_base_patch16_224(pretrained,num_classes,**kwargs):
+    model = timm.create_model('vit_base_patch16_224',pretrained=pretrained,num_classes=num_classes,**kwargs)
     return model
-def original_vit_tiny_patch16_224(**kwargs):
-    model = timm.create_model('vit_tiny_patch16_224',pretrained=True,num_classes=2,**kwargs)
+def original_vit_tiny_patch16_224(pretrained,num_classes,**kwargs):
+    model = timm.create_model('vit_tiny_patch16_224',pretrained=pretrained,num_classes=num_classes,**kwargs)
     return model
-def original_vit_small_patch16_224(**kwargs):
-    model = timm.create_model('vit_small_patch16_224',pretrained=True,num_classes=2,**kwargs)
+def original_vit_small_patch16_224(pretrained,num_classes,**kwargs):
+    model = timm.create_model('vit_small_patch16_224',pretrained=pretrained,num_classes=num_classes,**kwargs)
     return model
 def original_vit_tiny_patch16_224_in21k(**kwargs):
     model = timm.create_model('vit_tiny_patch16_224_in21k',pretrained=True,num_classes=2,**kwargs)
