@@ -16,6 +16,7 @@ def extract_values(file_path, key):
 
 # Function to plot the data
 def plot_acc_data(file_path,outputdir,split):
+    plt.cla()
     x_key='epoch'
     y_key='test_acc1'
     x_values = extract_values(file_path, x_key)
@@ -43,6 +44,7 @@ def plot_acc_data(file_path,outputdir,split):
     plt.savefig(os.path.join(outputdir,f'{split}_test_acc.png'))
 
 def plot_loss_data(file_path, outputdir,split):
+    plt.cla()
     x_key='epoch'
     y_keys=['train_loss','test_loss']
     x_values = extract_values(file_path, x_key)
