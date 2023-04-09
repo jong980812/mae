@@ -35,7 +35,6 @@ from util.pos_embed import interpolate_pos_embed
 from util.misc import NativeScalerWithGradNormCount as NativeScaler
 from util.visualizer import plot_acc_data,plot_loss_data
 import models_vit
-
 from engine_finetune import train_one_epoch, evaluate
 
 
