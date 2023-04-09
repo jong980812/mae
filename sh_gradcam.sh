@@ -1,8 +1,8 @@
 #!/bin/bash
 model=original_vit_small_patch16_224
-img_path=/data/dataset/asd/kfold-cleanup-ver2/hand/0/val/ASD/A15-002-002.jpg  
-out_path=/data/jongseo/project/asd/imae/result/grad_cam/mae
-weight=/data/jongseo/project/asd/imae/result/kfold/pretrain_80_pth/OUT/0/checkpoint-19.pth
+img_path=/data/jongseo/project/asd/imae/piano.png
+out_path=/data/jongseo/project/asd/imae #/data/jongseo/project/asd/imae/result/grad_cam/small/TD
+weight=/data/jongseo/project/asd/imae/result/kfold_cleanup_ver2/pretraining_small_1e-5/OUT/0/checkpoint-19.pth
 #!----------------
 python -u /data/jongseo/project/asd/imae/get_gradcam.py \
     --use-cuda \
@@ -18,3 +18,5 @@ python -u /data/jongseo/project/asd/imae/get_gradcam.py \
 
 #ASD:'0'
 #TD: '1'
+
+#A11-001-001.jpg  A11-002-002.jpg  A15-001-001.jpg  A15-002-002.jpg  A6-001-001.jpg  A6-002-002.jpg

@@ -154,8 +154,7 @@ if __name__ == '__main__':
     rgb_img = cv2.imread(args.image_path, 1)[:, :, ::-1]
     rgb_img = cv2.resize(rgb_img, (224, 224))
     rgb_img = np.float32(rgb_img) / 255
-    input_tensor = preprocess_image_no_normarlize(rgb_img, mean=[0.5, 0.5, 0.5],
-                                    std=[0.5, 0.5, 0.5])
+    input_tensor = preprocess_image_no_normarlize(rgb_img)#! normalize 안하려고 일부로 만들긴함.
 
     # If None, returns the map for the highest scoring category.
     # Otherwise, targets the requested category.
@@ -187,6 +186,8 @@ if __name__ == '__main__':
     if targets is None:
         print(f'model predict {class_predicted}')
         
-        
-    img_name=f'target:{class_predicted}_'+f'{args.method}_'+(args.image_path.split('/')[-1]).split('.')[0] +'.png'
+    
+    img_name= \
+    (args.image_path.split('/')[-1]).split('.')[0] +f'_{class_predicted}_'+'Model predict.png'if args.target_classes==-1 \
+    else (args.image_path.split('/')[-1]).split('.')[0] +f'_{class_predicted}'+'.png'
     cv2.imwrite(os.path.join(args.output_dir,img_name), cam_image)
