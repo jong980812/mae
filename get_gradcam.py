@@ -2,6 +2,9 @@ import argparse
 import cv2
 import numpy as np
 import torch
+from PIL import Image
+import torchvision.transforms as T
+
 
 from pytorch_grad_cam import GradCAM, \
     ScoreCAM, \
@@ -151,8 +154,9 @@ if __name__ == '__main__':
                                    use_cuda=args.use_cuda,
                                    reshape_transform=reshape_transform)
 
-    rgb_img = cv2.imread(args.image_path, 1)[:, :, ::-1]
-    rgb_img = cv2.resize(rgb_img, (224, 224))
+    rgb_img = Image.open(args.image_path)
+    transform_resize = T.Resize((224,224))
+    rgb_img = transform_resize(rgb_img)
     rgb_img = np.float32(rgb_img) / 255
     input_tensor = preprocess_image_no_normarlize(rgb_img)#! normalize 안하려고 일부로 만들긴함.
 
