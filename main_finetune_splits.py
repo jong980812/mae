@@ -34,6 +34,7 @@ from util.datasets import build_dataset
 from util.pos_embed import interpolate_pos_embed
 from util.misc import NativeScalerWithGradNormCount as NativeScaler
 from util.visualizer import plot_acc_data,plot_loss_data
+from util.freeze import unfreeze_block
 import models_vit
 from engine_finetune import train_one_epoch, evaluate
 
@@ -156,6 +157,8 @@ def get_args_parser():
     parser.add_argument('--save_ckpt_freq', default=10, type=int,help='체크 포인트 저장 주기')
     parser.add_argument('--first_split',default=True,type=bool)
     parser.add_argument('--max_acc', action='store_true')#max acc사용할때
+    parser.add_argument('--unfreeze_layers', default=None, nargs='+', type=str)
+    
     return parser
 
 
@@ -275,7 +278,9 @@ def main(args):
 
         # manually initialize fc layer
         trunc_normal_(model.head.weight, std=2e-5)
-
+    if args.unfreeze_layers is not None:
+        model, unfreeze_list = unfreeze_block(model,args.unfreeze_layers)
+        print('unfreeze list :', unfreeze_list)
     model.to(device)
 
     model_without_ddp = model
