@@ -8,11 +8,10 @@ from torchvision.transforms import Compose, Normalize, ToTensor
 from typing import List, Dict
 import math
 
-
 def preprocess_image(
     img: np.ndarray, mean=[
-        0.5, 0.5, 0.5], std=[
-            0.5, 0.5, 0.5]) -> torch.Tensor:
+        0.485, 0.456, 0.406], std=[
+            0.229, 0.224, 0.225]) -> torch.Tensor:
     preprocessing = Compose([
         ToTensor(),
         Normalize(mean=mean, std=std)

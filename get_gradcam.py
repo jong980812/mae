@@ -158,7 +158,7 @@ if __name__ == '__main__':
     transform_resize = T.Resize((224,224))
     rgb_img = transform_resize(rgb_img)
     rgb_img = np.float32(rgb_img) / 255
-    input_tensor = preprocess_image_no_normarlize(rgb_img)#! normalize 안하려고 일부로 만들긴함.
+    input_tensor = preprocess_image(rgb_img)#! normalize 안하려고 일부로 만들긴함.
 
     # If None, returns the map for the highest scoring category.
     # Otherwise, targets the requested category.
