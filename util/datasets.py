@@ -65,15 +65,20 @@ def build_transform(is_train, args):
     data_transforms = {
             'train': transforms.Compose([
                 transforms.Resize((224, 224)),
+                transforms.RandomInvert(1.0),
                 transforms.ToTensor(),
-                transforms.Normalize(mean=[0.485, 0.456, 0.406],
-                                        std=[0.229, 0.224, 0.225])
+                transforms.Normalize(mean=[0.9, 0.9, 0.9],
+                                        std=[0.05,0.05,0.05])
                 ]),
                 'val': transforms.Compose([
                 transforms.Resize((224, 224)),
+                transforms.RandomInvert(1.0),
                 transforms.ToTensor(),
-                transforms.Normalize(mean=[0.485, 0.456, 0.406],
-                                        std=[0.229, 0.224, 0.225])
+                transforms.Normalize(mean=[0.9, 0.9, 0.9],
+                                        std=[0.05,0.05,0.05])
                 ])}
     
     return data_transforms['train'] if is_train else data_transforms['val']#transforms.Compose(t)
+
+
+

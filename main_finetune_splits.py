@@ -393,7 +393,7 @@ if __name__ == '__main__':
     accs=[]
     print(f"{len(sub_data_path)} datasets training starts\n\n")
     for split_path in sub_data_path:
-        if int(split_path)>0:
+        if int(split_path)>1:
             args.first_split=False
         args.data_path=os.path.join(super_data_path,split_path)
         args.output_dir=os.path.join(super_output_dir,split_path)
