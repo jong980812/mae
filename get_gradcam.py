@@ -136,7 +136,6 @@ if __name__ == '__main__':
 
     if args.use_cuda:
         model = model.cuda()
-
     target_layers = [model.blocks[-1].norm1]
 
     if args.method not in methods:
@@ -153,12 +152,12 @@ if __name__ == '__main__':
                                    target_layers=target_layers,
                                    use_cuda=args.use_cuda,
                                    reshape_transform=reshape_transform)
-
+        
     rgb_img = Image.open(args.image_path)
     transform_resize = T.Resize((224,224))
     rgb_img = transform_resize(rgb_img)
     rgb_img = np.float32(rgb_img) / 255
-    input_tensor = preprocess_image(rgb_img)#! normalize 안하려고 일부로 만들긴함.
+    input_tensor = preprocess_image(rgb_img,mean=[0.9761, 0.9771, 0.9794],std=[0.0797, 0.0790, 0.0766])#! normalize 안하려고 일부로 만들긴함.
 
     # If None, returns the map for the highest scoring category.
     # Otherwise, targets the requested category.
@@ -174,13 +173,14 @@ if __name__ == '__main__':
                         targets=targets,
                         eigen_smooth=args.eigen_smooth,
                         aug_smooth=args.aug_smooth)
-    if model_predict==0:
-        class_predicted='ASD'
-    elif model_predict==1:
-        class_predicted='TD'
-    else:
-        pass
-    #! 나중에 추가될수도있으니 일단 하드코딩
+    if args.asd:
+        if model_predict==0:
+            class_predicted='ASD'
+        elif model_predict==1:
+            class_predicted='TD'
+        else:
+            pass
+        #! 나중에 추가될수도있으니 일단 하드코딩
     
     # Here grayscale_cam has only one image in the batch
     grayscale_cam = grayscale_cam[0, :]
@@ -189,7 +189,6 @@ if __name__ == '__main__':
     #! 이 경우 내가 target을 지정하지 않았으므로 모델이 뭘 찍었는지 알려줘야함.
     if targets is None:
         print(f'model predict {class_predicted}')
-        
     
     img_name= \
     (args.image_path.split('/')[-1]).split('.')[0] +f'_{class_predicted}_'+'Model predict.png'if args.target_classes==-1 \

@@ -85,8 +85,8 @@ def original_vit_tiny_patch16_224_in21k(**kwargs):
     model = timm.create_model('vit_tiny_patch16_224_in21k',pretrained=True,num_classes=2,**kwargs)
     return model
 
-def resnet18(num_classes):
-    model = models.resnet18(pretrained=True)
+def resnet18(num_classes,pretrained):
+    model = models.resnet18(pretrained=pretrained)
     in_ft = model.fc.in_features #모델의 마지막 fc layer in feature
     model.fc = nn.Linear(in_ft,num_classes)
     return model

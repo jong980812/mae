@@ -238,11 +238,12 @@ def main(args):
         num_classes=args.nb_classes,
         drop_path_rate=args.drop_path,
         )
-        trunc_normal_(model.head.weight, std=2e-5)
+        trunc_normal_(model.head.weight, std=0.02)
         # assert args.finetune is None, "Original vit has already pretrained weight"
     elif 'resnet' in args.model:
         model= models_vit.__dict__[args.model](
-        num_classes=args.nb_classes
+        num_classes=args.nb_classes,
+        pretrained=True if args.finetune is None else False,
         )
         trunc_normal_(model.fc.weight, std=2e-5)
         
@@ -253,13 +254,13 @@ def main(args):
         global_pool=args.global_pool,
         )
 
-    if args.finetune and not args.eval:
+    if args.finetune :#and not args.eval:
         checkpoint = torch.load(args.finetune, map_location='cpu')
 
         print("Load pre-trained checkpoint from: %s" % args.finetune)
         checkpoint_model = checkpoint['model']
         state_dict = model.state_dict()
-        for k in ['head.weight', 'head.bias']:
+        for k in ['head.weight', 'head.bias','fc.weight','fc.bias']:
             if k in checkpoint_model and checkpoint_model[k].shape != state_dict[k].shape:
                 print(f"Removing key {k} from pretrained checkpoint")
                 del checkpoint_model[k]
@@ -270,14 +271,14 @@ def main(args):
         # load pre-trained model
         msg = model.load_state_dict(checkpoint_model, strict=False)
         print(msg)
-
-        if args.global_pool:
-            assert set(msg.missing_keys) == {'head.weight', 'head.bias', 'fc_norm.weight', 'fc_norm.bias'}
-        else:
-            assert set(msg.missing_keys) == {'head.weight', 'head.bias'}
+        if 'resnet' not in args.model and not args.eval:
+            if args.global_pool:
+                assert set(msg.missing_keys) == {'head.weight', 'head.bias', 'fc_norm.weight', 'fc_norm.bias'}
+            else:
+                assert set(msg.missing_keys) == {'head.weight', 'head.bias'}
+            trunc_normal_(model.head.weight, std=0.02)
 
         # manually initialize fc layer
-        trunc_normal_(model.head.weight, std=2e-5)
     if args.unfreeze_layers is not None:
         model, unfreeze_list = unfreeze_block(model,args.unfreeze_layers)
         print('unfreeze list :', unfreeze_list)
@@ -329,17 +330,19 @@ def main(args):
     print("criterion = %s" % str(criterion))
 
     misc.load_model(args=args, model_without_ddp=model_without_ddp, optimizer=optimizer, loss_scaler=loss_scaler)
-
+    super_output_dir=os.path.abspath(os.path.join(args.output_dir, os.pardir))
+    txt_dir=os.path.join(super_output_dir, f"{args.split_path}_log.txt")
     if args.eval:
         test_stats = evaluate(data_loader_val, model, device)
         print(f"Accuracy of the network on the {len(dataset_val)} test images: {test_stats['acc1']:.1f}%")
+        with open(txt_dir, mode="a", encoding="utf-8") as f:
+            f.write(f"Accuracy of the network on the {len(dataset_val)} test images: {test_stats['acc1']:.1f}%"+ "\n")
         exit(0)
 
     print(f"Start training for {args.epochs} epochs")
     start_time = time.time()
     max_accuracy = 0.0
-    super_output_dir=os.path.abspath(os.path.join(args.output_dir, os.pardir))
-    txt_dir=os.path.join(super_output_dir, f"{args.split_path}_log.txt")
+
     for epoch in range(args.start_epoch, args.epochs):
         if args.distributed:
             data_loader_train.sampler.set_epoch(epoch)
@@ -402,9 +405,10 @@ if __name__ == '__main__':
         print("\n\n********************************************")
         print(f"{split_path}th model training start!\nData Dir: {args.data_path}")
         args.split_path = split_path
+        print(args.data_path,args.split_path)
         test_acc1=main(args)
         accs.append(test_acc1)
-        with open(os.path.join(super_output_dir, "Total_acc.txt"), mode="a", encoding="utf-8") as f:
+        with open(os.path.join(super_output_dir, "00_Total_acc.txt"), mode="a", encoding="utf-8") as f:
             f.write(f"{split_path} final Top 1 acc: {test_acc1}\n")
-    with open(os.path.join(super_output_dir, "Total_acc.txt"), mode="a", encoding="utf-8") as f:
+    with open(os.path.join(super_output_dir, "00_Total_acc.txt"), mode="a", encoding="utf-8") as f:
         f.write(f"Average Acc : {sum(accs)/len(accs)}\n")
