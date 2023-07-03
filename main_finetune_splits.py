@@ -36,6 +36,7 @@ from util.misc import NativeScalerWithGradNormCount as NativeScaler
 from util.visualizer import plot_acc_data,plot_loss_data
 from util.freeze import unfreeze_block
 import models_vit
+import torchvision.models as models
 from engine_finetune import train_one_epoch, evaluate
 
 
@@ -246,7 +247,10 @@ def main(args):
         pretrained=True if args.finetune is None else False,
         )
         trunc_normal_(model.fc.weight, std=2e-5)
-        
+    elif 'efficient' in args.model:
+        model=models.eff(pretrained=True)
+        model.classifier[1] = torch.nn.Linear(1280, 2)
+        trunc_normal_(model.classifier[1].weight, std=2e-5)
     else:
         model = models_vit.__dict__[args.model](
         num_classes=args.nb_classes,
