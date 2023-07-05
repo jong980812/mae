@@ -248,9 +248,13 @@ def main(args):
         )
         trunc_normal_(model.fc.weight, std=2e-5)
     elif 'efficient' in args.model:
-        model=models.eff(pretrained=True)
+        model=models.efficientnet_b1(pretrained=True)
         model.classifier[1] = torch.nn.Linear(1280, 2)
         trunc_normal_(model.classifier[1].weight, std=2e-5)
+    elif 'dense' in args.model:
+        model=models.densenet121(pretrained=True)
+        model.classifier= torch.nn.Linear(1024,2)
+        trunc_normal_(model.classifier.weight, std=2e-5)
     else:
         model = models_vit.__dict__[args.model](
         num_classes=args.nb_classes,
@@ -310,12 +314,11 @@ def main(args):
         model_without_ddp = model.module
 
     # build optimizer with layer-wise lr decay (lrd)
-    if 'resnet' in args.model:
+    if 'resnet' in args.model or 'effi' in args.model or 'dense' in args.model:
         params_to_update = model.parameters()
         optimizer = torch.optim.SGD(params_to_update, lr=args.lr, momentum=0.9)
         
     else:
-
         param_groups = lrd.param_groups_lrd(model_without_ddp, args.weight_decay,
             no_weight_decay_list=model_without_ddp.no_weight_decay(),
             layer_decay=args.layer_decay

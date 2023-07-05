@@ -65,6 +65,12 @@ def build_transform(is_train, args):
     data_transforms = {
             'train': transforms.Compose([
                 transforms.Resize((224, 224)),
+                transforms.RandomHorizontalFlip(p=0.5),
+                 transforms.ColorJitter(brightness=(0.5, 0.9), 
+                           contrast=(0.4, 0.8), 
+                           saturation=(0.7, 0.9),
+                           hue=(-0.2, 0.2),
+                          ),
                 transforms.ToTensor(),
                 transforms.Normalize(mean=[0.96, 0.96, 0.96],
                                         std=[0.06, 0.06, 0.06])
