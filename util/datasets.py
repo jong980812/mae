@@ -18,8 +18,10 @@ from timm.data.constants import IMAGENET_DEFAULT_MEAN, IMAGENET_DEFAULT_STD
 
 
 def build_dataset(is_train, args):
-    transform = build_transform(is_train, args)
-
+    if args.dataset == 'asd':
+        transform = build_transform_sketch_imagenet(is_train, args)
+    if args.dataset == 'sketch_imagenet':    
+        transform = build_transform_sketch_imagenet(is_train, args)
     root = os.path.join(args.data_path, 'train' if is_train else 'val')
     dataset = datasets.ImageFolder(root, transform=transform)
 
@@ -28,43 +30,10 @@ def build_dataset(is_train, args):
     return dataset
 
 
-def build_transform(is_train, args):
-    # mean = IMAGENET_DEFAULT_MEAN
-    # std = IMAGENET_DEFAULT_STD
-    # # train transform
-    # if is_train:
-    #     # this should always dispatch to transforms_imagenet_train
-    #     transform = create_transform(
-    #         input_size=args.input_size,
-    #         is_training=True,
-    #         color_jitter=args.color_jitter,
-    #         auto_augment=args.aa,
-    #         interpolation='bicubic',
-    #         re_prob=args.reprob,
-    #         re_mode=args.remode,
-    #         re_count=args.recount,
-    #         mean=mean,
-    #         std=std,
-    #     )
-    #     return transform
-
-    # # eval transform
-    # t = []
-    # if args.input_size <= 224:
-    #     crop_pct = 224 / 256
-    # else:
-    #     crop_pct = 1.0
-    # size = int(args.input_size / crop_pct)
-    # t.append(
-    #     transforms.Resize(size, interpolation=transforms.InterpolationMode.BICUBIC)#PIL.Image.BICUBIC),  # to maintain same ratio w.r.t. 224 images
-    # )
-    # t.append(transforms.CenterCrop(args.input_size))
-
-    # t.append(transforms.ToTensor())
-    # t.append(transforms.Normalize(mean, std))
+def build_transform_asd(is_train, args):
     data_transforms = {
             'train': transforms.Compose([
-                transforms.Resize((224, 224)),
+                transforms.Resize((224,224)),
                 transforms.RandomHorizontalFlip(p=0.5),
                  transforms.ColorJitter(brightness=(0.5, 0.9), 
                            contrast=(0.4, 0.8), 
@@ -76,12 +45,49 @@ def build_transform(is_train, args):
                                         std=[0.06, 0.06, 0.06])
                 ]),
                 'val': transforms.Compose([
-                transforms.Resize((224, 224)),
+                transforms.Resize(256),
+                transforms.CenterCrop(224),
                 transforms.ToTensor(),
                 transforms.Normalize(mean=[0.96, 0.96, 0.96],
                                         std=[0.06, 0.06, 0.06])
                 ])}
+    # data_transforms = {
+    #         'train': transforms.Compose([
+    #             transforms.RandomResizedCrop(112),
+    #             transforms.RandomHorizontalFlip(p=0.5),
+    #             transforms.ToTensor(),
+    #             transforms.Normalize(mean=[0.485, 0.456, 0.406],
+    #                                  std=[0.229, 0.224, 0.225])
+
+    #             ]),
+    #             'val': transforms.Compose([
+    #             transforms.Resize(256),
+    #             transforms.CenterCrop(224),
+    #             transforms.ToTensor(),
+    #             transforms.Normalize(mean=[0.485, 0.456, 0.406],
+    #                                  std=[0.229, 0.224, 0.225])
+
+    #             ])}
     
     return data_transforms['train'] if is_train else data_transforms['val']#transforms.Compose(t)
 
+def build_transform_sketch_imagenet(is_train, args):
+    data_transforms = {
+            'train': transforms.Compose([
+                transforms.RandomResizedCrop(size=224, scale=(0.2,1)),
+                transforms.RandomHorizontalFlip(p=0.5),
+                transforms.ToTensor(),
+                transforms.Normalize(mean=[0.485, 0.456, 0.406],
+                                     std=[0.229, 0.224, 0.225])
 
+                ]),
+                'val': transforms.Compose([
+                transforms.Resize(256),
+                transforms.CenterCrop(224),
+                transforms.ToTensor(),
+                transforms.Normalize(mean=[0.485, 0.456, 0.406],
+                                     std=[0.229, 0.224, 0.225])
+
+                ])}
+    
+    return data_transforms['train'] if is_train else data_transforms['val']#transforms.Compose(t)

@@ -118,6 +118,7 @@ def get_args_parser():
                         help='Use class token instead of global pool for classification')
 
     # Dataset parameters
+    parser.add_argument('--dataset', default='asd',type=str)
     parser.add_argument('--data_path', default='/datasets01/imagenet_full_size/061417/', type=str,
                         help='dataset path')
     parser.add_argument('--nb_classes', default=1000, type=int,
@@ -249,11 +250,11 @@ def main(args):
         trunc_normal_(model.fc.weight, std=2e-5)
     elif 'efficient' in args.model:
         model=models.efficientnet_b1(pretrained=True)
-        model.classifier[1] = torch.nn.Linear(1280, 2)
+        model.classifier[1] = torch.nn.Linear(1280, args.nb_classes)
         trunc_normal_(model.classifier[1].weight, std=2e-5)
     elif 'dense' in args.model:
         model=models.densenet121(pretrained=True)
-        model.classifier= torch.nn.Linear(1024,2)
+        model.classifier= torch.nn.Linear(1024,args.nb_classes)
         trunc_normal_(model.classifier.weight, std=2e-5)
     else:
         model = models_vit.__dict__[args.model](
@@ -268,23 +269,23 @@ def main(args):
         print("Load pre-trained checkpoint from: %s" % args.finetune)
         checkpoint_model = checkpoint['model']
         state_dict = model.state_dict()
-        for k in ['head.weight', 'head.bias','fc.weight','fc.bias']:
+        for k in ['head.weight', 'head.bias','fc.weight','fc.bias','classifier.1.weight','classifier.1.bias']:
             if k in checkpoint_model and checkpoint_model[k].shape != state_dict[k].shape:
                 print(f"Removing key {k} from pretrained checkpoint")
                 del checkpoint_model[k]
 
         # interpolate position embedding
-        interpolate_pos_embed(model, checkpoint_model)
+        # interpolate_pos_embed(model, checkpoint_model)
 
         # load pre-trained model
         msg = model.load_state_dict(checkpoint_model, strict=False)
         print(msg)
-        if 'resnet' not in args.model and not args.eval:
-            if args.global_pool:
-                assert set(msg.missing_keys) == {'head.weight', 'head.bias', 'fc_norm.weight', 'fc_norm.bias'}
-            else:
-                assert set(msg.missing_keys) == {'head.weight', 'head.bias'}
-            trunc_normal_(model.head.weight, std=0.02)
+        # if 'resnet' not in args.model and not args.eval:
+        #     if args.global_pool:
+        #         assert set(msg.missing_keys) == {'head.weight', 'head.bias', 'fc_norm.weight', 'fc_norm.bias'}
+        #     else:
+        #         assert set(msg.missing_keys) == {'head.weight', 'head.bias'}
+        #     trunc_normal_(model.head.weight, std=0.02)
 
         # manually initialize fc layer
     if args.unfreeze_layers is not None:

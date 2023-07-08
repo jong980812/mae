@@ -1,13 +1,18 @@
 #quickdraw 클래스 존재하는  폴더로감
+train_folder=/data/datasets/tu_berlin/01/train
 folders=$(ls $train_folder) #! 존재하는 클래스 폴더이름 다 받아옴. 345개
 for folder in $folders; do
-  mkdir -p "/local_datasets/quickdraw/new_w4_10k/01/val/$folder"
+  mkdir -p "/data/datasets/tu_berlin/01/val/$folder"
 done
 #이러면 val에 빈 폴더들 생성됌. 345개.
 #우리가 사용ㅇ하려는 클래스 폴더를 val 폴더에 똑같이 만들어놓음 (아마 345개 다쓸꺼면 )
 
 for folder in $folders; do
-    find /local_datasets/quickdraw/images-centering/$folder -name "*.png" -type f -print0 | shuf -n 500 -z | xargs -0 -I{} cp {} /local_datasets/quickdraw/new_w4_10k/01/val/$folder
+    bias=1
+    counting=$(ls -l | wc -l)
+    number="$((counting-bias))"
+    val_number="$((number/5))"
+    find /data/datasets/tu_berlin/01/train/$folder -name "*.png" -type f -print0 | shuf -n val_number -z | xargs -0 -I{} mv {} /data/datasets/tu_berlin/01/val/$folder
 done
 
 
