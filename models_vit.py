@@ -85,10 +85,66 @@ def original_vit_tiny_patch16_224_in21k(**kwargs):
     model = timm.create_model('vit_tiny_patch16_224_in21k',pretrained=True,num_classes=2,**kwargs)
     return model
 
-def resnet18(num_classes,pretrained):
-    model = models.resnet18(pretrained=pretrained)
-    in_ft = model.fc.in_features #모델의 마지막 fc layer in feature
-    model.fc = nn.Linear(in_ft,num_classes)
+#@jong980812
+# def resnet18(num_classes,pretrained):
+#     model = models.resnet18(pretrained=pretrained)
+#     in_ft = model.fc.in_features #모델의 마지막 fc layer in feature
+#     model.fc = nn.Linear(in_ft,num_classes)
+#     return model
+
+class ResNet18(nn.Module) :
+    def __init__(self, num_classes) -> None:
+        super().__init__()
+        self.module = models.resnet18(weights='IMAGENET1K_V1')
+        in_ft = self.module.fc.in_features 
+        self.module.fc = nn.Linear(in_ft, num_classes)
+    
+    def _forward_features(self, x: torch.Tensor) -> torch.Tensor:
+        x = self.module.conv1(x)
+        x = self.module.bn1(x)
+        x = self.module.relu(x)
+        x = self.module.maxpool(x)
+
+        x = self.module.layer1(x)
+        x = self.module.layer2(x)
+        x = self.module.layer3(x)
+        x = self.module.layer4(x)
+
+        x = self.module.avgpool(x)
+        x = torch.flatten(x, 1)
+
+        return x
+    
+    def forward(self, x) :
+        feat = self._forward_features(x)
+        pred = self.module.fc(feat)
+        return feat, pred
+        
+    
+def resnet18(num_classes, pretrained=True, return_conv5=False):
+    if not return_conv5 :
+        if pretrained :
+            model = models.resnet18(weights='IMAGENET1K_V1')
+            print("set resnet18 as imgnet pretrained")
+        else :
+            model = models.resnet18(weights=None)
+            print("set resnet18 as random initialized states")
+        in_ft = model.fc.in_features 
+        model.fc = nn.Linear(in_ft, num_classes)
+    else :   #* for feature extraction
+        model = ResNet18(num_classes)
+        
+    return model
+
+def resnet50(num_classes, pretrained=True, return_conv5=False) :
+    if pretrained :
+        model = models.resnet50(weights='IMAGENET1K_V1')
+        print("set resnet18 as imgnet pretrained")
+    else :
+        model = models.resnet50(weights=None)
+        print("set resnet18 as random initialized states")
+    in_ft = model.fc.in_features 
+    model.fc = nn.Linear(in_ft, num_classes)
     return model
 
 
