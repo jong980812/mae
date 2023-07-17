@@ -35,6 +35,9 @@ from util.pos_embed import interpolate_pos_embed
 from util.misc import NativeScalerWithGradNormCount as NativeScaler
 from util.visualizer import plot_acc_data,plot_loss_data
 from util.freeze import unfreeze_block
+import util.model
+import util.model_rpp
+import util.scratch_cnn
 import models_vit
 import torchvision.models as models
 from engine_finetune import train_one_epoch, evaluate
@@ -251,28 +254,48 @@ def main(args):
     elif 'efficient' in args.model:
         model=models.efficientnet_b1(pretrained=True)
         model.classifier[1] = torch.nn.Linear(1280, args.nb_classes)
-        trunc_normal_(model.classifier[1].weight, std=2e-5)
+        trunc_normal_(model.classifier[1].weight, std=2e-3)
     elif 'dense' in args.model:
         model=models.densenet121(pretrained=True)
         model.classifier= torch.nn.Linear(1024,args.nb_classes)
         trunc_normal_(model.classifier.weight, std=2e-5)
+    elif 'pcb' in args.model:
+        model=util.model.efficientnet_b1(pretrained=True, cut_at_pooling=False,
+                 num_features=256, norm=False, dropout=0.5, num_classes=args.nb_classes, 
+                 FCN=True, radius=1., thresh=0.5)
+    elif 'rpp' in args.model:
+        model=util.model_rpp.efficientnet_b1_rpp(pretrained=True, cut_at_pooling=False,
+                    num_features=256, norm=False, dropout=0.5, num_classes=args.nb_classes, 
+                    FCN=True, T=1., dim=256)
+    elif 'scratch' in args.model:
+        model=util.scratch_cnn.Net()
+        
     else:
         model = models_vit.__dict__[args.model](
         num_classes=args.nb_classes,
         drop_path_rate=args.drop_path,
         global_pool=args.global_pool,
         )
+    
 
     if args.finetune :#and not args.eval:
-        checkpoint = torch.load(args.finetune, map_location='cpu')
-
-        print("Load pre-trained checkpoint from: %s" % args.finetune)
-        checkpoint_model = checkpoint['model']
-        state_dict = model.state_dict()
-        for k in ['head.weight', 'head.bias','fc.weight','fc.bias','classifier.1.weight','classifier.1.bias']:
-            if k in checkpoint_model and checkpoint_model[k].shape != state_dict[k].shape:
-                print(f"Removing key {k} from pretrained checkpoint")
-                del checkpoint_model[k]
+        
+        if 'rpp' in args.model:
+            finetune_path=os.path.join(args.finetune, args.split_path,'checkpoint-19.pth')
+            checkpoint = torch.load(finetune_path, map_location='cpu')
+            print("Load pre-trained checkpoint from: %s" % finetune_path)
+            checkpoint_model = checkpoint['model']
+            state_dict = model.state_dict()
+        
+        else:
+            checkpoint = torch.load(args.finetune, map_location='cpu')
+            print("Load pre-trained checkpoint from: %s" % args.finetune)
+            checkpoint_model = checkpoint['model']
+            state_dict = model.state_dict()
+            for k in ['head.weight', 'head.bias','fc.weight','fc.bias','classifier.1.weight','classifier.1.bias']:
+                if k in checkpoint_model and checkpoint_model[k].shape != state_dict[k].shape:
+                    print(f"Removing key {k} from pretrained checkpoint")
+                    del checkpoint_model[k]
 
         # interpolate position embedding
         # interpolate_pos_embed(model, checkpoint_model)
@@ -311,11 +334,11 @@ def main(args):
     print("effective batch size: %d" % eff_batch_size)
 
     if args.distributed:
-        model = torch.nn.parallel.DistributedDataParallel(model, device_ids=[args.gpu])
+        model = torch.nn.parallel.DistributedDataParallel(model, device_ids=[args.gpu],find_unused_parameters=True)
         model_without_ddp = model.module
 
     # build optimizer with layer-wise lr decay (lrd)
-    if 'resnet' in args.model or 'effi' in args.model or 'dense' in args.model:
+    if 'scratch' in args.model or 'rpp' in args.model or 'pcb' in args.model or 'resnet' in args.model or 'effi' in args.model or 'dense' in args.model:
         params_to_update = model.parameters()
         optimizer = torch.optim.SGD(params_to_update, lr=args.lr, momentum=0.9)
         
