@@ -16,7 +16,7 @@ import numpy as np
 import os
 import time
 from pathlib import Path
-
+import random
 import torch
 import torch.backends.cudnn as cudnn
 from torch.utils.tensorboard import SummaryWriter
@@ -40,7 +40,7 @@ import util.model_rpp
 import util.scratch_cnn
 import models_vit
 import torchvision.models as models
-from engine_finetune import train_one_epoch, evaluate
+from engine_pcb import train_one_epoch, evaluate
 
 
 def get_args_parser():
@@ -177,11 +177,7 @@ def main(args):
     device = torch.device(args.device)
 
     # fix the seed for reproducibility
-    seed = args.seed + misc.get_rank()
-    torch.manual_seed(seed)
-    np.random.seed(seed)
 
-    cudnn.benchmark = True
 
     dataset_train = build_dataset(is_train=True, args=args)
     dataset_val = build_dataset(is_train=False, args=args)
@@ -211,7 +207,13 @@ def main(args):
         log_writer = SummaryWriter(log_dir=args.log_dir)
     else:
         log_writer = None
-
+    seed = args.seed + misc.get_rank()
+    torch.manual_seed(args.seed)
+    torch.cuda.manual_seed(args.seed)
+    np.random.seed(args.seed)
+    random.seed(args.seed)
+    cudnn.deterministic=True
+    cudnn.benchmark = False
     data_loader_train = torch.utils.data.DataLoader(
         dataset_train, sampler=sampler_train,
         batch_size=args.batch_size,
@@ -265,7 +267,7 @@ def main(args):
                  FCN=True, radius=1., thresh=0.5)
     elif 'rpp' in args.model:
         model=util.model_rpp.efficientnet_b1_rpp(pretrained=True, cut_at_pooling=False,
-                    num_features=256, norm=False, dropout=0.5, num_classes=args.nb_classes, 
+                    num_features=256, norm=False, dropout=0.2, num_classes=args.nb_classes, 
                     FCN=True, T=1., dim=256)
     elif 'scratch' in args.model:
         model=util.scratch_cnn.Net()
@@ -340,7 +342,7 @@ def main(args):
     # build optimizer with layer-wise lr decay (lrd)
     if 'scratch' in args.model or 'rpp' in args.model or 'pcb' in args.model or 'resnet' in args.model or 'effi' in args.model or 'dense' in args.model:
         params_to_update = model.parameters()
-        optimizer = torch.optim.SGD(params_to_update, lr=args.lr, momentum=0.9)
+        optimizer = torch.optim.AdamW(params_to_update, lr=args.lr, weight_decay=args.weight_decay)
         
     else:
         param_groups = lrd.param_groups_lrd(model_without_ddp, args.weight_decay,

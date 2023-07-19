@@ -40,7 +40,6 @@ def build_transform_asd(is_train, args):
     data_transforms = {
             'train': transforms.Compose([
                 transforms.Resize((224,224)),
-                transforms.RandomHorizontalFlip(p=0.5),
                 transforms.ToTensor(),
                 transforms.Normalize(mean=[0.96, 0.96, 0.96],
                                         std=[0.1, 0.1, 0.1])
@@ -57,7 +56,6 @@ def build_transform_pcb_asd(is_train, args):
     data_transforms = {
             'train': transforms.Compose([
                 transforms.Resize((384,128)),
-                transforms.RandomHorizontalFlip(p=0.5),
                 transforms.ToTensor(),
                 transforms.Normalize(mean=[0.96, 0.96, 0.96],
                                         std=[0.1, 0.1, 0.1])

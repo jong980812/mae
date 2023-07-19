@@ -53,7 +53,7 @@ def train_one_epoch(model: torch.nn.Module, criterion: torch.nn.Module,
             samples, targets = mixup_fn(samples, targets)
 
         with torch.cuda.amp.autocast():
-            _,outputs = model(samples)
+            _,outputs,_ = model(samples)
             loss0 = criterion(outputs[0], targets)
             loss1 = criterion(outputs[1], targets)
             loss2 = criterion(outputs[2], targets)
@@ -118,11 +118,14 @@ def evaluate(data_loader, model, device):
 
         # compute output
         with torch.cuda.amp.autocast():
-            _,outputs = model(images)
-            output=(outputs[1]+outputs[2]+outputs[0])/3 
-            loss = criterion(output, target)
+            _,outputs,_ = model(images)
+            loss0 = criterion(outputs[0], target)
+            loss1 = criterion(outputs[1], target)
+            loss2 = criterion(outputs[2], target)
+            loss= (loss0+loss1+loss2)/3
 
-        acc1, acc5 = accuracy(output, target, topk=(1, 2))
+
+        acc1, acc5 =accuracy(outputs[1], target, topk=(1, 2))
 
         batch_size = images.shape[0]
         metric_logger.update(loss=loss.item())
@@ -134,3 +137,25 @@ def evaluate(data_loader, model, device):
           .format(top1=metric_logger.acc1, top5=metric_logger.acc5, losses=metric_logger.loss))
 
     return {k: meter.global_avg for k, meter in metric_logger.meters.items()}
+
+
+import torch
+import numpy as np
+
+# def vote_accuracy(voted_output, target, topk=(1,)):
+#     """Computes the accuracy over the k top predictions for the specified values of k"""
+#     num_ensembles = len(voted_output)
+#     maxk = min(max(topk), voted_output[0].size()[1])
+#     batch_size = target.size(0)
+
+#     # Perform voting among the ensemble outputs
+#     voted_pred = torch.zeros_like(voted_output[0])
+#     _, pred0 = voted_output[0].topk(maxk, 1, True, True)
+#     _, pred1 = voted_output[1].topk(maxk, 1, True, True)
+#     _, pred2 = voted_output[2].topk(maxk, 1, True, True)
+
+#     pred = pred.t()
+#     correct = pred.eq(target.reshape(1, -1).expand_as(pred))
+
+
+#     return [correct[:min(k, maxk)].reshape(-1).float().sum(0) * 100. / batch_size for k in topk]
