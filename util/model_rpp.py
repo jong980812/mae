@@ -28,9 +28,9 @@ class EfficientNet(nn.Module):
 
 #==========================add dilation=============================#
         if self.FCN:
-            for mo in self.base.features[4][0].block[1].modules():
-                if isinstance(mo, nn.Conv2d):
-                    mo.stride = (1,1)
+            # for mo in self.base.features[4][0].block[1].modules():
+            #     if isinstance(mo, nn.Conv2d):
+            #         mo.stride = (1,1)
 #================append conv for FCN==============================#
             self.num_features = num_features
             self.num_classes = num_classes

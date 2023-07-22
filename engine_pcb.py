@@ -129,8 +129,8 @@ def evaluate(data_loader, model, device):
             loss2 = criterion(outputs[2], target)
             loss= (loss0+loss1+loss2)/3
 
-
-        acc1, acc5 =accuracy(outputs[1], target, topk=(1, 2))
+        output=(outputs[0]+outputs[1]+outputs[2])/3.0
+        acc1, acc5 =accuracy(output, target, topk=(1, 2))
 
         batch_size = images.shape[0]
         metric_logger.update(loss=loss.item())

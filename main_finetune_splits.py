@@ -40,7 +40,6 @@ import util.model_rpp
 import util.scratch_cnn
 import models_vit
 import torchvision.models as models
-from engine_pcb import train_one_epoch, evaluate
 
 
 def get_args_parser():
@@ -229,6 +228,12 @@ def main(args):
         pin_memory=args.pin_mem,
         drop_last=False
     )
+    
+    if 'pcb' in args.model or 'rpp' in args.model:
+        from engine_pcb import train_one_epoch, evaluate
+    else:
+        from engine_finetune import train_one_epoch, evaluate
+    
 
     mixup_fn = None
     mixup_active = args.mixup > 0 or args.cutmix > 0. or args.cutmix_minmax is not None
@@ -267,7 +272,7 @@ def main(args):
                  FCN=True, radius=1., thresh=0.5)
     elif 'rpp' in args.model:
         model=util.model_rpp.efficientnet_b1_rpp(pretrained=True, cut_at_pooling=False,
-                    num_features=256, norm=False, dropout=0.2, num_classes=args.nb_classes, 
+                    num_features=256, norm=False, dropout=0.5, num_classes=args.nb_classes, 
                     FCN=True, T=1., dim=256)
     elif 'scratch' in args.model:
         model=util.scratch_cnn.Net()
