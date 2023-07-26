@@ -12,10 +12,9 @@ import os
 import PIL
 
 from torchvision import datasets, transforms
-from custom_transform import ThresholdTransform
 from timm.data import create_transform
 from timm.data.constants import IMAGENET_DEFAULT_MEAN, IMAGENET_DEFAULT_STD
-from custom_transform import ThresholdTransform
+from util.custom_transform import ThresholdTransform
 
 def build_dataset(is_train, args):
     if args.dataset == 'asd':
@@ -29,7 +28,7 @@ def build_dataset(is_train, args):
     elif args.dataset == 'asd_gray':
         transform = build_transform_asd_gray_scale(is_train,args)
     elif args.dataset == 'binary':
-        transform=build_transform_asd_gray_scale
+        transform=build_transform_binary(is_train,args)
     root = os.path.join(args.data_path, 'train' if is_train else 'val')
     dataset = datasets.ImageFolder(root, transform=transform)
 
@@ -41,32 +40,30 @@ def build_dataset(is_train, args):
 def build_transform_asd(is_train, args):
     data_transforms = {
             'train': transforms.Compose([
-                transforms.Resize((64,64)),
+                transforms.Resize((224,168)),
                 transforms.ToTensor(),
-                transforms.Normalize(mean=[0.96, 0.96, 0.96],
-                                        std=[0.1, 0.1, 0.1])
+                # transforms.Normalize(mean=[0.96, 0.96, 0.96],
+                #                         std=[0.1, 0.1, 0.1])
                 ]),
                 'val': transforms.Compose([
-                transforms.Resize((64,64)),
+                transforms.Resize((224,168)),
                 transforms.ToTensor(),
-                transforms.Normalize(mean=[0.96, 0.96, 0.96],
-                                        std=[0.1, 0.1, 0.1])
+                # transforms.Normalize(mean=[0.96, 0.96, 0.96],
+                #                         std=[0.1, 0.1, 0.1])
                 ])}
     
     return data_transforms['train'] if is_train else data_transforms['val']#transforms.Compose(t)
 def build_transform_pcb_asd(is_train, args):
     data_transforms = {
             'train': transforms.Compose([
-                transforms.Resize((384,128)),
+                transforms.Resize((384,256)),
                 transforms.ToTensor(),
-                transforms.Normalize(mean=[0.96, 0.96, 0.96],
-                                        std=[0.1, 0.1, 0.1])
+
                 ]),
                 'val': transforms.Compose([
-                transforms.Resize((384,128)),
+                transforms.Resize((384,256)),
                 transforms.ToTensor(),
-                transforms.Normalize(mean=[0.96, 0.96, 0.96],
-                                        std=[0.1, 0.1, 0.1])
+
                 ])}
     
     return data_transforms['train'] if is_train else data_transforms['val']#transforms.Compose(t)
@@ -123,24 +120,26 @@ def build_transform_asd_gray_scale(is_train, args):
                 transforms.Resize((192,64)),
                 transforms.Grayscale(1),
                 transforms.ToTensor(),
-                transforms.Normalize(mean=[0.96],
-                                        std=[0.1])
                 ])}
     
     return data_transforms['train'] if is_train else data_transforms['val']#transforms.Compose(t)
 def build_transform_binary(is_train, args):
     data_transforms = {
             'train': transforms.Compose([
-                transforms.Resize((224,224)),
+                transforms.Resize((224,168)),
                 transforms.Grayscale(3),
                 transforms.ToTensor(),
-                ThresholdTransform(245),
+                ThresholdTransform(252),
+                # transforms.Normalize(mean=[0.9],
+                #                         std=[0.1])
                 ]),
                 'val': transforms.Compose([
-                transforms.Resize((224,224)),
+                transforms.Resize((224,168)),
                 transforms.Grayscale(3),
                 transforms.ToTensor(),
-                ThresholdTransform(245),
+                ThresholdTransform(252),
+                # transforms.Normalize(mean=[0.9],
+                        # std=[0.1])
                 ])}
     
     return data_transforms['train'] if is_train else data_transforms['val']#transforms.Compose(t)
