@@ -171,7 +171,7 @@ if __name__ == '__main__':
     model=models.efficientnet_b1(pretrained=True)
     model.classifier[1] = torch.nn.Linear(1280, 2)
     
-    model_path='/data/jong980812/project/mae/result_ver2/All_4split/bs4_1e-2_224_224/OUT/02/checkpoint-29.pth'
+    model_path='/data/jong980812/project/mae/result_ver2/All_4split/bs4_1e-2/OUT/01/checkpoint-29.pth'
     checkpoint = torch.load(model_path, map_location='cpu')
     print("Load pre-trained checkpoint from: %s" % model_path)
     checkpoint_model = checkpoint['model']

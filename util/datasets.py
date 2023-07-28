@@ -92,16 +92,11 @@ def build_transform_tu_berlin(is_train, args):
             'train': transforms.Compose([
                 transforms.Resize((224,224)),
                 transforms.RandomHorizontalFlip(p=0.5),
-                transforms.RandomRotation((-15,15)),
                 transforms.ToTensor(),
-                transforms.Normalize(mean=[0.96, 0.96, 0.96],
-                                        std=[0.1, 0.1, 0.1])
                 ]),
                 'val': transforms.Compose([
                 transforms.Resize(224),
                 transforms.ToTensor(),
-                transforms.Normalize(mean=[0.96, 0.96, 0.96],
-                                        std=[0.1, 0.1, 0.1])
                 ])}
     return data_transforms['train'] if is_train else data_transforms['val']#transforms.Compose(t)
 
