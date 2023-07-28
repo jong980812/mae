@@ -57,6 +57,7 @@ def train_one_epoch(model: torch.nn.Module, criterion: torch.nn.Module,
             loss = criterion(outputs, targets)
 
         loss_value = loss.item()
+        acc1, _ =accuracy(outputs, targets, topk=(1, 2))
 
         if not math.isfinite(loss_value):
             print("Loss is {}, stopping training".format(loss_value))
@@ -72,6 +73,7 @@ def train_one_epoch(model: torch.nn.Module, criterion: torch.nn.Module,
         torch.cuda.synchronize()
 
         metric_logger.update(loss=loss_value)
+        metric_logger.meters['acc1'].update(acc1.item(), n=samples.shape[0])
         min_lr = 10.
         max_lr = 0.
         for group in optimizer.param_groups:
@@ -91,6 +93,8 @@ def train_one_epoch(model: torch.nn.Module, criterion: torch.nn.Module,
 
     # gather the stats from all processes
     metric_logger.synchronize_between_processes()
+    print('* Acc@1 {top1.global_avg:.3f}  loss {losses.global_avg:.3f}'
+    .format(top1=metric_logger.acc1, losses=metric_logger.loss))
     print("Averaged stats:", metric_logger)
     return {k: meter.global_avg for k, meter in metric_logger.meters.items()}
 
