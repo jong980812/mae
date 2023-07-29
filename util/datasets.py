@@ -158,11 +158,7 @@ class Part_based_dataset(Dataset):
         self.data_path = os.path.join(root_dir, 'train') if is_train else os.path.join(root_dir,'val') 
         self.class_ind = {'ASD': 0, 'TD': 1}
         self.ext = "jpg"
-<<<<<<< HEAD
-        self.json_path = '/data/datasets/asd/All_5split' +  "_annotations"
-=======
         self.json_path = self.json_path
->>>>>>> 7a06f5e42e9455eea610b109da1811e3af3240b1
 
         print("img_root_dir : ", self.data_path)
         print("json_root_dir : ", self.json_path)
@@ -196,15 +192,8 @@ class Part_based_dataset(Dataset):
             image = self.transform(image)   #* transform -> float, (3, h, w)
         label = self.label_list[idx]
 
-<<<<<<< HEAD
-        img_name = self.img_list[idx].split('/')[-1].split('.')[0] + ".json"
-        cls_name = self.img_list[idx].split('/')[-2]
-        print(img_name)
-        with open(os.path.join(self.json_path, cls_name, img_name), 'r') as f :   
-=======
         json_name = self.img_list[idx].split('/')[-1].split('.')[0] + ".json"
         with open(os.path.join(self.json_path, json_name), 'r') as f :   
->>>>>>> 7a06f5e42e9455eea610b109da1811e3af3240b1
             part_anns = json.load(f)
 
         anns_dict = dict()
