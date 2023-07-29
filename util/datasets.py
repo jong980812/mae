@@ -19,7 +19,7 @@ from util.custom_transform import ThresholdTransform
 def build_dataset(is_train, args):
     if args.dataset == 'asd_part_based' :
         mode = "train" if is_train else "val"
-        return Part_based_dataset(args.data_path, mode)
+        return Part_based_dataset(args.data_path, args.json_path, mode)
     elif args.dataset == 'asd':
         transform = build_transform_asd(is_train, args)
     elif args.dataset == 'pcb_asd':
@@ -151,14 +151,14 @@ from torch.utils.data import Dataset
 import json
 
 class Part_based_dataset(Dataset):
-    def __init__(self, root_dir, mode):
+    def __init__(self, root_dir, json_dir, mode):
         is_train = True if mode == "train" else False
         self.transform = build_transform_asd(is_train, None)
         self.img_list, self.label_list = [],[]
         self.data_path = root_dir
         self.class_ind = {'ASD': 0, 'TD': 1}
         self.ext = "jpg"
-        self.json_path = self.data_path +  "_annotations"
+        self.json_path = self.json_path
 
         print("img_root_dir : ", self.data_path)
         print("json_root_dir : ", self.json_path)
@@ -192,8 +192,8 @@ class Part_based_dataset(Dataset):
             image = self.transform(image)   #* transform -> float, (3, h, w)
         label = self.label_list[idx]
 
-        img_name = self.img_list[idx].split('/')[-1]
-        with open(os.path.join(self.json_path, img_name), 'r') as f :   
+        json_name = self.img_list[idx].split('/')[-1].split('.')[0] + ".json"
+        with open(os.path.join(self.json_path, json_name), 'r') as f :   
             part_anns = json.load(f)
 
         anns_dict = dict()
