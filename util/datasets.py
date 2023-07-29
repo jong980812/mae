@@ -19,7 +19,7 @@ from util.custom_transform import ThresholdTransform
 def build_dataset(is_train, args):
     if args.dataset == 'asd_part_based' :
         mode = "train" if is_train else "val"
-        return Part_based_dataset(args.data_path, args.json_path, mode)
+        return Part_based_dataset(args.data_path, args.json_path, mode, args.part_type)
     elif args.dataset == 'asd':
         transform = build_transform_asd(is_train, args)
     elif args.dataset == 'pcb_asd':
@@ -55,7 +55,8 @@ def build_transform_asd(is_train, args):
                                         std=[0.1, 0.1, 0.1])
                 ])}
     
-    return data_transforms['train'] if is_train else data_transforms['val']#transforms.Compose(t)
+    return data_transforms['train'] if is_train else data_transforms['val'] # transforms.Compose(t)
+    
 def build_transform_pcb_asd(is_train, args):
     data_transforms = {
             'train': transforms.Compose([
@@ -149,19 +150,22 @@ from PIL import Image
 import torch
 from torch.utils.data import Dataset
 import json
+import numpy as np
 
 class Part_based_dataset(Dataset):
-    def __init__(self, root_dir, json_dir, mode):
+    def __init__(self, root_dir, json_dir, mode, part_type):
         is_train = True if mode == "train" else False
         self.transform = build_transform_asd(is_train, None)
         self.img_list, self.label_list = [],[]
-        self.data_path = os.path.join(root_dir, 'train') if is_train else os.path.join(root_dir,'val') 
+        self.data_path = os.path.join(root_dir, mode) 
         self.class_ind = {'ASD': 0, 'TD': 1}
         self.ext = "jpg"
         self.json_path = json_dir
+        self.part_type = part_type
 
         print("img_root_dir : ", self.data_path)
         print("json_root_dir : ", self.json_path)
+        print("return_part_type : ", self.part_type)
         print("class_ind : ", self.class_ind)
         print("extension : ", self.ext)
 
@@ -177,19 +181,18 @@ class Part_based_dataset(Dataset):
     def _crop_image(self, img, original_h, original_w, anns) :
         h, w = original_h, original_w
         p1, p2 = anns
-        resized_h, resized_w = img.shape[1:]
-        xmin, ymin = int(p1[0]/w * resized_w), int(p1[1]/h * resized_h)
-        xmax, ymax = int(p2[0]/w * resized_w), int(p2[1]/h * resized_h)
-        cropped_img = img[:, ymin:ymax, xmin:xmax]   #* img.shape = (3, h, w)
+        xmin, ymin = int(p1[0]), int(p1[1])
+        xmax, ymax = int(p2[0]), int(p2[1])
+        cropped_img = img.crop([xmin, ymin, xmax, ymax])   #* img.shape = (3, h, w)
+        cropped_img.save("/data/ahngeo11/mae-upstream/ex.png")
         return cropped_img
 
     def __getitem__(self, idx):
         totensor = transforms.ToTensor()
-
+        
         image = Image.open(self.img_list[idx])  #* '/local_datasets/asd/compact_crop_trimmed_2/01/train/TD/B9-002-002.jpg'
         h, w = totensor(image).shape[1:]
-        if self.transform:
-            image = self.transform(image)   #* transform -> float, (3, h, w)
+        
         label = self.label_list[idx]
 
         json_name = self.img_list[idx].split('/')[-1].split('.')[0] + ".json"
@@ -201,8 +204,17 @@ class Part_based_dataset(Dataset):
             anns_dict[obj_ann['label']] = obj_ann['points']
         
         #! implementation for 3 parts
-        img_head = self._crop_image(image, h, w, anns_dict['head'])
-        img_upper_body = self._crop_image(image, h, w, anns_dict['upper_body'])
-        img_lower_body = self._crop_image(image, h, w, anns_dict['lower_body'])
-        
-        return img_head, img_upper_body, img_lower_body, label
+        if self.part_type == 'head':
+            img_head = self._crop_image(image, h, w, anns_dict['head'])
+            img_head = self.transform(img_head)   #* transform -> float, (3, h, w)
+            return img_head, label
+        elif self.part_type == 'upper_body':
+            img_upper_body = self._crop_image(image, h, w, anns_dict['upper_body'])
+            img_upper_body = self.transform(img_upper_body.permute)
+            return img_upper_body, label
+        elif self.part_type == 'lower_body':
+            img_lower_body = self._crop_image(image, h, w, anns_dict['lower_body'])
+            img_lower_body = self.transform(img_lower_body.permute)
+            return img_lower_body, label
+
+        # return img_head, img_upper_body, img_lower_body, label
