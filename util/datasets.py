@@ -160,10 +160,10 @@ class Part_based_dataset(Dataset):
         is_train = True if mode == "train" else False
         self.transform = build_transform_asd(is_train, None)
         self.img_list, self.label_list = [],[]
-        self.data_path = root_dir
+        self.data_path = os.path.join(root_dir, mode)
         self.class_ind = {'ASD': 0, 'TD': 1}
         self.ext = "jpg"
-        self.json_path = self.json_path
+        self.json_path = json_dir
 
         print("img_root_dir : ", self.data_path)
         print("json_root_dir : ", self.json_path)
@@ -179,7 +179,7 @@ class Part_based_dataset(Dataset):
     def __len__(self):
         return len(self.img_list)
 
-    def _crop_image(img, original_h, original_w, anns) :
+    def _crop_image(self, img, original_h, original_w, anns) :
         h, w = original_h, original_w
         p1, p2 = anns
         resized_h, resized_w = img.shape[1:]
