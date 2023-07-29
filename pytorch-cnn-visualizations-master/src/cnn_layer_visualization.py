@@ -33,18 +33,18 @@ class CNNLayerVisualization():
             # Gets the conv output of the selected filter (from selected layer)
             self.conv_output = grad_out[0, self.selected_filter]
         # Hook the selected layer
-        self.model[self.selected_layer].register_forward_hook(hook_function)
+        self.model[7][0].block[0][0].register_forward_hook(hook_function)
 
     def visualise_layer_with_hooks(self):
         # Hook the selected layer
         self.hook_layer()
         # Generate a random image
-        random_image = np.uint8(np.random.uniform(150, 180, (224, 224, 3)))
+        random_image = np.uint8(np.random.uniform(230, 250, (224, 224, 3)))
         # Process image and return variable
         processed_image = preprocess_image(random_image, False)
         # Define optimizer for the image
-        optimizer = Adam([processed_image], lr=0.1, weight_decay=1e-6)
-        for i in range(1, 31):
+        optimizer = Adam([processed_image], lr=0.05, weight_decay=1e-6)
+        for i in range(1, 100):
             optimizer.zero_grad()
             # Assign create image to a variable to move forward in the model
             x = processed_image
@@ -69,7 +69,7 @@ class CNNLayerVisualization():
             self.created_image = recreate_image(processed_image)
             # Save image
             if i % 5 == 0:
-                im_path = '../generated/layer_vis_l' + str(self.selected_layer) + \
+                im_path = '/data/jong980812/project/mae/pytorch-cnn-visualizations-master/generated/layer_vis_l' + str(self.selected_layer) + \
                     '_f' + str(self.selected_filter) + '_iter' + str(i) + '.jpg'
                 save_image(self.created_image, im_path)
 
@@ -117,10 +117,22 @@ class CNNLayerVisualization():
 
 if __name__ == '__main__':
     cnn_layer = 17
-    filter_pos = 5
+    filter_pos = 10
     # Fully connected layer is not needed
-    pretrained_model = models.vgg16(pretrained=True).features
-    layer_vis = CNNLayerVisualization(pretrained_model, cnn_layer, filter_pos)
+    # pretrained_model = models.vgg16(pretrained=True).features
+    
+        # pretrained_model = models.alexnet(pretrained=True)
+    pretrained_model=models.efficientnet_b1(pretrained=True)
+    pretrained_model.classifier[1] = torch.nn.Linear(1280, 2)
+    
+    model_path='/data/jong980812/project/mae/result_ver2/All_4split/bs4_1e-2/OUT/01/checkpoint-29.pth'
+    checkpoint = torch.load(model_path, map_location='cpu')
+    print("Load pre-trained checkpoint from: %s" % model_path)
+    checkpoint_model = checkpoint['model']
+    state_dict = pretrained_model.state_dict()
+    msg = pretrained_model.load_state_dict(checkpoint_model, strict=False)
+    print(msg)
+    layer_vis = CNNLayerVisualization(pretrained_model.features, cnn_layer, filter_pos)
 
     # Layer visualization with pytorch hooks
     layer_vis.visualise_layer_with_hooks()

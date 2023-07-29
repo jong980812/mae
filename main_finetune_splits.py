@@ -256,7 +256,7 @@ def main(args):
         num_classes=args.nb_classes,
         pretrained=True if args.finetune is None else False,
         )
-        trunc_normal_(model.fc.weight, std=2e-5)
+        trunc_normal_(model.fc.weight, std=2e-3)
     elif 'efficient' in args.model:
         model=models.efficientnet_b1(pretrained=True)
         model.classifier[1] = torch.nn.Linear(1280, args.nb_classes)

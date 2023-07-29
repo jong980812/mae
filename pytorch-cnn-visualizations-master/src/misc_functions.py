@@ -171,7 +171,8 @@ def preprocess_image(pil_im, resize_im=True):
     # Mean and std list for channels (Imagenet)
     mean = [0.485, 0.456, 0.406]
     std = [0.229, 0.224, 0.225]
-
+    # mean = [0.96,0.96,0.96]
+    # std= [0.1,0.1,0.1]
     # Ensure or transform incoming image to PIL image
     if type(pil_im) != Image.Image:
         try:
@@ -209,10 +210,12 @@ def recreate_image(im_as_var):
     """
     reverse_mean = [-0.485, -0.456, -0.406]
     reverse_std = [1/0.229, 1/0.224, 1/0.225]
+    # reverse_mean = [-0.96, -0.96, -0.96]
+    # reverse_std = [1/0.1, 1/0.1, 1/0.1]
     recreated_im = copy.copy(im_as_var.data.numpy()[0])
     # for c in range(3):
-        # recreated_im[c] /= reverse_std[c]
-        # recreated_im[c] -= reverse_mean[c]
+    #     recreated_im[c] /= reverse_std[c]
+    #     recreated_im[c] -= reverse_mean[c]
     recreated_im[recreated_im > 1] = 1
     recreated_im[recreated_im < 0] = 0
     recreated_im = np.round(recreated_im * 255)
