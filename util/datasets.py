@@ -45,14 +45,14 @@ def build_transform_asd(is_train, args):
             'train': transforms.Compose([
                 transforms.Resize((224,168)),
                 transforms.ToTensor(),
-                # transforms.Normalize(mean=[0.96, 0.96, 0.96],
-                #                         std=[0.1, 0.1, 0.1])
+                transforms.Normalize(mean=[0.96, 0.96, 0.96],
+                                        std=[0.1, 0.1, 0.1])
                 ]),
                 'val': transforms.Compose([
                 transforms.Resize((224,168)),
                 transforms.ToTensor(),
-                # transforms.Normalize(mean=[0.96, 0.96, 0.96],
-                #                         std=[0.1, 0.1, 0.1])
+                transforms.Normalize(mean=[0.96, 0.96, 0.96],
+                                        std=[0.1, 0.1, 0.1])
                 ])}
     
     return data_transforms['train'] if is_train else data_transforms['val']#transforms.Compose(t)
@@ -155,10 +155,10 @@ class Part_based_dataset(Dataset):
         is_train = True if mode == "train" else False
         self.transform = build_transform_asd(is_train, None)
         self.img_list, self.label_list = [],[]
-        self.data_path = root_dir
+        self.data_path = os.path.join(root_dir, 'train') if is_train else os.path.join(root_dir,'val') 
         self.class_ind = {'ASD': 0, 'TD': 1}
         self.ext = "jpg"
-        self.json_path = self.data_path +  "_annotations"
+        self.json_path = '/data/datasets/asd/All_5split' +  "_annotations"
 
         print("img_root_dir : ", self.data_path)
         print("json_root_dir : ", self.json_path)
@@ -174,7 +174,7 @@ class Part_based_dataset(Dataset):
     def __len__(self):
         return len(self.img_list)
 
-    def _crop_image(img, original_h, original_w, anns) :
+    def _crop_image(self, img, original_h, original_w, anns) :
         h, w = original_h, original_w
         p1, p2 = anns
         resized_h, resized_w = img.shape[1:]
@@ -192,8 +192,10 @@ class Part_based_dataset(Dataset):
             image = self.transform(image)   #* transform -> float, (3, h, w)
         label = self.label_list[idx]
 
-        img_name = self.img_list[idx].split('/')[-1]
-        with open(os.path.join(self.json_path, img_name), 'r') as f :   
+        img_name = self.img_list[idx].split('/')[-1].split('.')[0] + ".json"
+        cls_name = self.img_list[idx].split('/')[-2]
+        print(img_name)
+        with open(os.path.join(self.json_path, cls_name, img_name), 'r') as f :   
             part_anns = json.load(f)
 
         anns_dict = dict()

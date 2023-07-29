@@ -29,12 +29,13 @@ class RegularizedClassSpecificImageGeneration():
         self.model.eval()
         self.target_class = target_class
         # Generate a random image
-        self.created_image = np.uint8(np.zeros((224,224,3)))
+        self.created_image = np.uint8(np.random.uniform(120, 160, (224, 224, 3)))
+
         # Create the folder to export images if not exists
         if not os.path.exists(f'../generated/class_{self.target_class}'):
             os.makedirs(f'../generated/class_{self.target_class}')
 
-    def generate(self, iterations=1000, blur_freq=6, blur_rad=0.8, wd=0.01, clipping_value=0.1):
+    def generate(self, iterations=5000, blur_freq=4, blur_rad=1., wd=0.001, clipping_value=0.1):
         """Generates class specific image with enhancements to improve image quality. 
         See https://arxiv.org/abs/1506.06579 for details on each argument's effect on output quality. 
         
@@ -52,7 +53,7 @@ class RegularizedClassSpecificImageGeneration():
         Returns:
             np.ndarray -- Final maximally activated class image
         """
-        initial_learning_rate = 1
+        initial_learning_rate = 0.0001
         for i in range(1, iterations):
             # Process image and return variable
 
@@ -166,12 +167,12 @@ def preprocess_and_blur_image(pil_im, resize_im=True, blur_rad=None):
     return im_as_var
 
 if __name__ == '__main__':
-    target_class =0  # Flamingo
+    target_class =1  # Flamingo
     # pretrained_model = models.alexnet(pretrained=True)
     model=models.efficientnet_b1(pretrained=True)
     model.classifier[1] = torch.nn.Linear(1280, 2)
     
-    model_path='/data/jong980812/project/mae/result_ver2/All_4split/bs4_1e-2/OUT/01/checkpoint-29.pth'
+    model_path='/data/jong980812/project/mae/result_ver2/All_5split/bs4_1e-2/OUT/05/checkpoint-29.pth'
     checkpoint = torch.load(model_path, map_location='cpu')
     print("Load pre-trained checkpoint from: %s" % model_path)
     checkpoint_model = checkpoint['model']
@@ -179,7 +180,7 @@ if __name__ == '__main__':
     msg = model.load_state_dict(checkpoint_model, strict=False)
     print(msg)
     csig = RegularizedClassSpecificImageGeneration(model, target_class)
-    csig.generate()
+    csig.generate(iterations=1000)
 
     # target_class = 130  # Flamingo
     # pretrained_model = models.alexnet(pretrained=True)

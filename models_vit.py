@@ -124,7 +124,7 @@ class ResNet18(nn.Module) :
 def resnet18(num_classes, pretrained=True, return_conv5=False):
     if not return_conv5 :
         if pretrained :
-            model = models.resnet18(weights='IMAGENET1K_V1')
+            model = models.resnet18(pretrained=True)
             print("set resnet18 as imgnet pretrained")
         else :
             model = models.resnet18(weights=None)
