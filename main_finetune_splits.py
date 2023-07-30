@@ -122,8 +122,8 @@ def get_args_parser():
     parser.add_argument('--dataset', default='asd',type=str)
     parser.add_argument('--data_path', default='/datasets01/imagenet_full_size/061417/', type=str,
                         help='dataset path')
-    parser.add_argument('--json_path', default='/data/datasets/asd/All_5split_annotations', type=str)
-    parser.add_argument('--part_type', default='Head', type=str)
+    parser.add_argument('--json_path', default='/data/datasets/asd/asd_all_5folds_annotation', type=str)
+    parser.add_argument('--part_type', default='head', choices=['head', 'upper_body', 'lower_body'], type=str)
     parser.add_argument('--nb_classes', default=1000, type=int,
                         help='number of the classification types')
 
