@@ -5,28 +5,31 @@ Created on Thu Oct 26 14:19:44 2017
 """
 import os
 import numpy as np
-
+import copy
 import torch
 from torch.optim import SGD
 from torchvision import models
 from misc_functions import preprocess_image, recreate_image, save_image
 from timm.models.layers import trunc_normal_
-
+from torchvision import datasets, transforms
+from PIL import Image
 
 class ClassSpecificImageGeneration():
     """
         Produces an image that maximizes a certain class with gradient ascent
     """
     def __init__(self, model, target_class):
-        self.mean = [-0.485, -0.456, -0.406]
-        self.std = [1/0.229, 1/0.224, 1/0.225]
-        # self.mean = [-0.96, -0.96, -0.96]
-        # self.std = [1/0.1, 1/0.1, 1/0.1]
+        # self.mean = [-0.485, -0.456, -0.406]
+        # self.std = [1/0.229, 1/0.224, 1/0.225]
+        self.mean = [-0.96, -0.96, -0.96]
+        self.std = [1/0.1, 1/0.1, 1/0.1]
         self.model = model
         self.model.eval()
         self.target_class = target_class
         # Generate a random image
-        self.created_image = np.uint8(np.random.uniform(150, 180, (224, 224, 3)))
+        self.created_image = np.uint8(np.random.uniform(140, 160, (224, 224, 3)))
+        # self.created_image=np.uint8(Image.open('/data/datasets/tu_berlin/01/train/bicycle/1700.png'))#pillow객체)
+        # self.created_image = np.repeat(self.created_image[:,:,np.newaxis],3,-1) 
         # Create the folder to export images if not exists
         if not os.path.exists('../generated/class_'+str(self.target_class)):
             os.makedirs('../generated/class_'+str(self.target_class))
@@ -39,12 +42,13 @@ class ClassSpecificImageGeneration():
 
         Returns:
             np.ndarray -- Final maximally activated class image
+            
         """
-        initial_learning_rate = 6
+        topil=transforms.ToPILImage()
+        initial_learning_rate = 1
         for i in range(1, iterations):
             # Process image and return variable
-            self.processed_image = preprocess_image(self.created_image, False)
-
+            self.processed_image = preprocess_image(self.created_image, True)
             # Define optimizer for the image
             optimizer = SGD([self.processed_image], lr=initial_learning_rate)
             # Forward
@@ -61,30 +65,51 @@ class ClassSpecificImageGeneration():
             class_loss.backward()
             # Update image
             optimizer.step()
-            # Recreate image
             self.created_image = recreate_image(self.processed_image)
             if i % 10 == 0 or i == iterations-1:
+                self.save_img=copy.copy(self.processed_image.data.numpy()[0])
+                reverse_mean = [-0.96, -0.96, -0.96]
+                reverse_std = [1/0.1, 1/0.1, 1/0.1]
+                for c in range(3):
+                    self.save_img[c] /= reverse_std[c]
+                    self.save_img[c] -= reverse_mean[c]
+                # self.save_img[self.save_img > 0.5] = 255
+                # self.save_img[self.save_img < 0.5] = 0
+                self.save_img=(self.save_img.transpose(1,2,0))
+                self.save_img =np.uint8(self.save_img * 255)
+                topil=transforms.ToPILImage()
+                self.save_img=topil(self.save_img)
+                transform=transforms.Compose([
+                transforms.Grayscale(3),
+                transforms.ToTensor(),
+                ])
+                self.save_img=transform(self.save_img)
+                # self.save_img[self.save_img > 0.3] = 1
+                # self.save_img[self.save_img < 0.3] = 0
+                self.save_img=topil(self.save_img)
                 # Save image
-                im_path = os.path.join('/data/jong980812/project/mae/pytorch-cnn-visualizations-master/generated/class_0','iter_'+str(i)+'.png')
-                save_image(self.created_image, im_path)
+                im_path = os.path.join(f'/data/jong980812/project/mae/pytorch-cnn-visualizations-master/generated/class_{self.target_class}','iter_'+str(i)+'.png')
+                
+                save_image(self.save_img, im_path)
 
         return self.processed_image
 
 
 if __name__ == '__main__':
-    target_class = 52  # Flamingo
+    target_class =1  # Flamingo
     # pretrained_model = models.alexnet(pretrained=True)
     model=models.efficientnet_b1(pretrained=True)
-    # model.classifier[1] = torch.nn.Linear(1280, 2)
+    model.classifier[1] = torch.nn.Linear(1280, 2)
     
-    # model_path='/data/jong980812/project/mae/result_ver2/All_5split/bs4_1e-2/OUT/05/checkpoint-29.pth'
-    # checkpoint = torch.load(model_path, map_location='cpu')
-    # print("Load pre-trained checkpoint from: %s" % model_path)
-    # checkpoint_model = checkpoint['model']
-    # state_dict = model.state_dict()
-    # msg = model.load_state_dict(checkpoint_model, strict=False)
-    # print(msg)
+    model_path='/data/jong980812/project/mae/result_ver2/All_5split/bs4_1e-2/OUT/01/checkpoint-29.pth'
+    checkpoint = torch.load(model_path, map_location='cpu')
+    print("Load pre-trained checkpoint from: %s" % model_path)
+    checkpoint_model = checkpoint['model']
+    state_dict = model.state_dict()
+    msg = model.load_state_dict(checkpoint_model, strict=False)
+    print(msg)
     csig = ClassSpecificImageGeneration(model, target_class)
+    os.makedirs(f'/data/jong980812/project/mae/pytorch-cnn-visualizations-master/generated/class_{target_class}',exist_ok=True)
     csig.generate()
 
 

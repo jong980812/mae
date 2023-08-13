@@ -122,7 +122,7 @@ def get_args_parser():
     parser.add_argument('--dataset', default='asd',type=str)
     parser.add_argument('--data_path', default='/datasets01/imagenet_full_size/061417/', type=str,
                         help='dataset path')
-    parser.add_argument('--json_path', default='/data/datasets/asd/asd_all_5folds_annotation', type=str)
+    parser.add_argument('--json_path', default='/data/datasets/asd/All_5split_annotations', type=str)
     parser.add_argument('--part_type', default='head', choices=['head', 'upper_body', 'lower_body'], type=str)
     parser.add_argument('--nb_classes', default=1000, type=int,
                         help='number of the classification types')
@@ -163,6 +163,8 @@ def get_args_parser():
     parser.add_argument('--first_split',default=True,type=bool)
     parser.add_argument('--max_acc', action='store_true')#max acc사용할때
     parser.add_argument('--unfreeze_layers', default=None, nargs='+', type=str)
+    parser.add_argument('--dropout', default=0.2,type=float)
+    parser.add_argument('--stochastic_depth_prob',default=0.2,type=float)
     
     return parser
 
@@ -259,7 +261,7 @@ def main(args):
         )
         trunc_normal_(model.fc.weight, std=2e-3)
     elif 'efficient' in args.model:
-        model=models.efficientnet_b1(pretrained=True)
+        model=models.efficientnet_b1(pretrained=True,dropout=args.dropout,stochastic_depth_prob=args.stochastic_depth_prob)
         model.classifier[1] = torch.nn.Linear(1280, args.nb_classes)
         trunc_normal_(model.classifier[1].weight, std=2e-3)
     elif 'dense' in args.model:
