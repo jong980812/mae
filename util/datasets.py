@@ -45,34 +45,45 @@ def build_dataset(is_train, args):
 def build_transform_asd(is_train, args):
     data_transforms = {
             'train': transforms.Compose([
-                transforms.Resize((224,168)),
+                transforms.Resize((224,224)),
+                # transforms.Grayscale(3),
+                # transforms.RandomInvert(1),
+                # transforms.RandomRotation((-5,5)),
+                # transforms.RandomHorizontalFlip(0.5),
                 transforms.ToTensor(),
-                transforms.Normalize(mean=[0.95, 0.95, 0.95],
-                                        std=[0.1, 0.1, 0.1])
+                # ThresholdTransform(10),
+                transforms.Normalize(mean=[0.5, 0.5, 0.5],
+                                        std=[0.5, 0.5, 0.5])
                 ]),
                 'val': transforms.Compose([
-                transforms.Resize((224,168)),
+                transforms.Resize((224,224)),
+                # transforms.Grayscale(3),
+                
+                # transforms.RandomInvert(1),
                 transforms.ToTensor(),
-                transforms.Normalize(mean=[0.96, 0.96, 0.96],
-                                        std=[0.1, 0.1, 0.1])
+                # ThresholdTransform(10),
+              transforms.Normalize(mean=[0.5, 0.5, 0.5],
+                                        std=[0.5, 0.5, 0.5])
                 ])}
     
     return data_transforms['train'] if is_train else data_transforms['val'] # transforms.Compose(t)
 def build_transform_DAPT(is_train, args):
     data_transforms = {
             'train': transforms.Compose([
-                transforms.Resize((224,168)),
+                transforms.Resize((224,224)),
+                transforms.RandomRotation(degrees=(-10,10)),
+                transforms.RandomHorizontalFlip(0.5),
                 transforms.Grayscale(3),
                 transforms.ToTensor(),
-                transforms.Normalize(mean=[0.93, 0.93, 0.93],
-                                        std=[0.12, 0.12, 0.12])
+                transforms.Normalize(mean=[0.95, 0.95, 0.95],
+                                        std=[0.1, 0.1, 0.1])
                 ]),
                 'val': transforms.Compose([
-                transforms.Resize((224,168)),
+                transforms.Resize((224,224)),
                 transforms.Grayscale(3),
                 transforms.ToTensor(),
-                transforms.Normalize(mean=[0.93, 0.93, 0.93],
-                                        std=[0.12, 0.12, 0.12])
+                transforms.Normalize(mean=[0.95, 0.95, 0.95],
+                                        std=[0.1, 0.1, 0.1])
                 ])}
     
     return data_transforms['train'] if is_train else data_transforms['val'] # transforms.Compose(t) 

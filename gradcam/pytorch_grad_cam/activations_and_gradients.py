@@ -39,6 +39,7 @@ class ActivationsAndGradients:
     def __call__(self, x):
         self.gradients = []
         self.activations = []
+        print(x.shape)
         return self.model(x)
 
     def release(self):
