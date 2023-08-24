@@ -121,6 +121,7 @@ class BaseCAM:
         # Loop over the saliency image from every layer
         for i in range(len(self.target_layers)):
             target_layer = self.target_layers[i]
+            print(target_layer)
             layer_activations = None
             layer_grads = None
             if i < len(activations_list):

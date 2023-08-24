@@ -4,7 +4,7 @@ from matplotlib.lines import Line2D
 import cv2
 import numpy as np
 import torch
-from torchvision.transforms import Compose, Normalize, ToTensor
+from torchvision.transforms import Compose, Normalize, ToTensor, Resize
 from typing import List, Dict
 import math
 

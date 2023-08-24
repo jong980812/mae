@@ -3,6 +3,7 @@ import cv2
 import numpy as np
 import torch
 from torchvision import models
+from torchvision import transforms
 from pytorch_grad_cam import GradCAM, \
     HiResCAM, \
     ScoreCAM, \
@@ -15,22 +16,25 @@ from pytorch_grad_cam import GradCAM, \
     FullGrad, \
     GradCAMElementWise
 
+from timm.models.layers import trunc_normal_
 
 from pytorch_grad_cam import GuidedBackpropReLUModel
 from pytorch_grad_cam.utils.image import show_cam_on_image, \
     deprocess_image, \
     preprocess_image
 from pytorch_grad_cam.utils.model_targets import ClassifierOutputTarget
-
+from PIL import Image
 
 def get_args():
     parser = argparse.ArgumentParser()
+    parser.add_argument('--finetune', default=None,
+                        help='finetune from checkpoint')
     parser.add_argument('--use-cuda', action='store_true', default=False,
                         help='Use NVIDIA GPU acceleration')
     parser.add_argument(
         '--image-path',
         type=str,
-        default='./examples/both.png',
+        default='/local_datasets/asd/All_9split/05/val/ASD/A-W6-o2.jpg',
         help='Input image path')
     parser.add_argument('--aug_smooth', action='store_true',
                         help='Apply test time augmentation to smooth the CAM')
@@ -79,8 +83,17 @@ if __name__ == '__main__':
          "fullgrad": FullGrad,
          "gradcamelementwise": GradCAMElementWise}
 
-    model = models.resnet50(pretrained=True)
-
+    # model = models.resnet50(pretrained=True)
+    model=models.efficientnet_relu_b1(pretrained=True,progress=False)
+    model.classifier[1] = torch.nn.Linear(1280, 2)
+    weight='/data/jong980812/project/mae/result_ver2/All_9split/efficient_relu/norm_0.5/bs4_1e-2/OUT/05/checkpoint-29.pth'
+    checkpoint = torch.load(weight, map_location='cpu')
+    print("Load pre-trained checkpoint from: %s" % weight)
+    checkpoint_model = checkpoint['model']
+    state_dict = model.state_dict()
+    msg = model.load_state_dict(checkpoint_model, strict=False)
+    print(msg)
+    
     # Choose the target layer you want to compute the visualization for.
     # Usually this will be the last convolutional layer in the model.
     # Some common choices can be:
@@ -93,13 +106,25 @@ if __name__ == '__main__':
     # You can also try selecting all layers of a certain type, with e.g:
     # from pytorch_grad_cam.utils.find_layers import find_layer_types_recursive
     # find_layer_types_recursive(model, [torch.nn.ReLU])
-    target_layers = [model.layer4]
+    target_layers = [model.features[-1]]
 
+    rgb_img = Image.open(args.image_path)
+    transform = transforms.Compose([
+                transforms.Resize((224,224)),
+                # transforms.Grayscale(3),
+                # transforms.RandomInvert(1),
+                transforms.ToTensor(),
+                # ThresholdTransform(10),
+              transforms.Normalize(mean=[0.5, 0.5, 0.5],
+                                        std=[0.5, 0.5, 0.5])
+                ])
+    input_tensor = transform(rgb_img).unsqueeze(0)
     rgb_img = cv2.imread(args.image_path, 1)[:, :, ::-1]
+    rgb_img = cv2.resize(rgb_img,(224,224))
     rgb_img = np.float32(rgb_img) / 255
-    input_tensor = preprocess_image(rgb_img,
-                                    mean=[0.485, 0.456, 0.406],
-                                    std=[0.229, 0.224, 0.225])
+    # input_tensor = preprocess_image((rgb_img),
+                                    # mean=[0.96,0.96,0.96],
+                                    # std=[0.1, 0.1, 0.1])
 
     # We have to specify the target we want to generate
     # the Class Activation Maps for.
@@ -107,7 +132,6 @@ if __name__ == '__main__':
     # You can target specific categories by
     # targets = [e.g ClassifierOutputTarget(281)]
     targets = None
-
     # Using the with statement ensures the context is freed, and you can
     # recreate different CAM objects in a loop.
     cam_algorithm = methods[args.method]
@@ -118,7 +142,7 @@ if __name__ == '__main__':
         # AblationCAM and ScoreCAM have batched implementations.
         # You can override the internal batch size for faster computation.
         cam.batch_size = 32
-        grayscale_cam = cam(input_tensor=input_tensor,
+        grayscale_cam,model_predict = cam(input_tensor=input_tensor,
                             targets=targets,
                             aug_smooth=args.aug_smooth,
                             eigen_smooth=args.eigen_smooth)
@@ -130,7 +154,7 @@ if __name__ == '__main__':
 
         # cam_image is RGB encoded whereas "cv2.imwrite" requires BGR encoding.
         cam_image = cv2.cvtColor(cam_image, cv2.COLOR_RGB2BGR)
-
+    print(model_predict)
     gb_model = GuidedBackpropReLUModel(model=model, use_cuda=args.use_cuda)
     gb = gb_model(input_tensor, target_category=None)
 
