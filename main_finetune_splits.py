@@ -259,7 +259,7 @@ def main(args):
         )
         trunc_normal_(model.fc.weight, std=2e-3)
     elif 'efficient' in args.model:
-        model=models.efficientnet_b1(pretrained=True)
+        model=models.efficientnet_b1(weights=models.EfficientNet_B1_Weights.DEFAULT)
         model.classifier[1] = torch.nn.Linear(1280, args.nb_classes)
         trunc_normal_(model.classifier[1].weight, std=2e-3)
     elif 'dense' in args.model:
