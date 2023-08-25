@@ -25,19 +25,19 @@ class RegularizedClassSpecificImageGeneration():
     def __init__(self, model, target_class):
         # self.mean = [-0.485, -0.456, -0.406]
         # self.std = [1/0.229, 1/0.224, 1/0.225]
-        self.mean = [-0.96, -0.96, -0.96]
-        self.std = [1/0.1, 1/0.1, 1/0.1]
+        self.mean = [-0.5, -0.5, -0.5]
+        self.std = [1/0.5, 1/0.5, 1/0.5]
         self.model = model.cuda() if use_cuda else model
         self.model.eval()
         self.target_class = target_class
         # Generate a random image
-        self.created_image = np.uint8(np.random.uniform(245, 255, (224, 168, 3)))
+        self.created_image = np.uint8(np.random.uniform(140, 160, (224, 224, 3)))
 
         # Create the folder to export images if not exists
         if not os.path.exists(f'../generated/class_{self.target_class}'):
             os.makedirs(f'../generated/class_{self.target_class}')
 
-    def generate(self, iterations=5000, blur_freq=4, blur_rad=1., wd=0.0001, clipping_value=0.1):
+    def generate(self, iterations=5000, blur_freq=4, blur_rad=1., wd=0.05, clipping_value=0.1):
         """Generates class specific image with enhancements to improve image quality. 
         See https://arxiv.org/abs/1506.06579 for details on each argument's effect on output quality. 
         
@@ -55,7 +55,7 @@ class RegularizedClassSpecificImageGeneration():
         Returns:
             np.ndarray -- Final maximally activated class image
         """
-        initial_learning_rate =0.1
+        initial_learning_rate =10
         for i in range(1, iterations):
             # Process image and return variable
 
@@ -96,7 +96,7 @@ class RegularizedClassSpecificImageGeneration():
             # Recreate image
             self.created_image = recreate_image(self.processed_image.cpu())
 
-            if i in np.linspace(0, iterations, 10, dtype=int):
+            if i in np.linspace(0, iterations, 20, dtype=int):
                 # Save image
                 im_path = f'/data/jong980812/project/mae/pytorch-cnn-visualizations-master/generated/class_{self.target_class}/c_{self.target_class}_iter_{i}_loss_{class_loss.data.cpu().numpy()}.jpg'
                 save_image(self.created_image, im_path)
@@ -131,8 +131,8 @@ def preprocess_and_blur_image(pil_im, resize_im=True, blur_rad=None):
         im_as_var (torch variable): Variable that contains processed float tensor
     """
     # mean and std list for channels (Imagenet)
-    mean = [-0.96, -0.96, -0.96]
-    std = [1/0.1, 1/0.1, 1/0.1]
+    mean = [-0.5, -0.5, -0.5]
+    std = [1/0.5, 1/0.5, 1/0.5]
 
     #ensure or transform incoming image to PIL image
     if type(pil_im) != Image.Image:
@@ -169,12 +169,12 @@ def preprocess_and_blur_image(pil_im, resize_im=True, blur_rad=None):
     return im_as_var
 
 if __name__ == '__main__':
-    target_class =1  # Flamingo
+    target_class =0  # Flamingo
     # pretrained_model = models.alexnet(pretrained=True)
     model=models.efficientnet_b1(pretrained=True)
     model.classifier[1] = torch.nn.Linear(1280, 2)
     
-    model_path='/data/jong980812/project/mae/result_ver2/All_5split/Normalize/OUT/01/checkpoint-29.pth'
+    model_path='/data/jong980812/project/mae/result_ai_hub_all/efficientnet_b1/Aug_1/OUT/01/checkpoint-49.pth'
     checkpoint = torch.load(model_path, map_location='cpu')
     print("Load pre-trained checkpoint from: %s" % model_path)
     checkpoint_model = checkpoint['model']

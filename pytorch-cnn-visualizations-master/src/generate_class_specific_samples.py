@@ -21,13 +21,13 @@ class ClassSpecificImageGeneration():
     def __init__(self, model, target_class):
         # self.mean = [-0.485, -0.456, -0.406]
         # self.std = [1/0.229, 1/0.224, 1/0.225]
-        self.mean = [-0.96, -0.96, -0.96]
-        self.std = [1/0.1, 1/0.1, 1/0.1]
+        self.mean = [-0.5, -0.5, -0.5]
+        self.std = [1/0.5, 1/0.5, 1/0.5]
         self.model = model
         self.model.eval()
         self.target_class = target_class
         # Generate a random image
-        self.created_image = np.uint8(np.random.uniform(140, 160, (224, 224, 3)))
+        self.created_image = np.uint8(np.random.uniform(250, 255, (224, 224, 3)))
         # self.created_image=np.uint8(Image.open('/data/datasets/tu_berlin/01/train/bicycle/1700.png'))#pillow객체)
         # self.created_image = np.repeat(self.created_image[:,:,np.newaxis],3,-1) 
         # Create the folder to export images if not exists
@@ -45,7 +45,7 @@ class ClassSpecificImageGeneration():
             
         """
         topil=transforms.ToPILImage()
-        initial_learning_rate = 1
+        initial_learning_rate = 5
         for i in range(1, iterations):
             # Process image and return variable
             self.processed_image = preprocess_image(self.created_image, True)
@@ -68,8 +68,8 @@ class ClassSpecificImageGeneration():
             self.created_image = recreate_image(self.processed_image)
             if i % 10 == 0 or i == iterations-1:
                 self.save_img=copy.copy(self.processed_image.data.numpy()[0])
-                reverse_mean = [-0.96, -0.96, -0.96]
-                reverse_std = [1/0.1, 1/0.1, 1/0.1]
+                reverse_mean = [-0.5, -0.5, -0.5]
+                reverse_std = [1/0.5, 1/0.5, 1/0.5]
                 for c in range(3):
                     self.save_img[c] /= reverse_std[c]
                     self.save_img[c] -= reverse_mean[c]
@@ -80,7 +80,7 @@ class ClassSpecificImageGeneration():
                 topil=transforms.ToPILImage()
                 self.save_img=topil(self.save_img)
                 transform=transforms.Compose([
-                transforms.Grayscale(3),
+                # transforms.Grayscale(3),
                 transforms.ToTensor(),
                 ])
                 self.save_img=transform(self.save_img)
@@ -96,12 +96,12 @@ class ClassSpecificImageGeneration():
 
 
 if __name__ == '__main__':
-    target_class =1  # Flamingo
+    target_class =0  # Flamingo
     # pretrained_model = models.alexnet(pretrained=True)
     model=models.efficientnet_b1(pretrained=True)
     model.classifier[1] = torch.nn.Linear(1280, 2)
     
-    model_path='/data/jong980812/project/mae/result_ver2/All_5split/bs4_1e-2/OUT/01/checkpoint-29.pth'
+    model_path='/data/jong980812/project/mae/result_ai_hub_all/efficientnet_b1/Aug_1/OUT/01/checkpoint-49.pth'
     checkpoint = torch.load(model_path, map_location='cpu')
     print("Load pre-trained checkpoint from: %s" % model_path)
     checkpoint_model = checkpoint['model']

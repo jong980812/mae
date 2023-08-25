@@ -24,6 +24,8 @@ def build_dataset(is_train, args):
         transform = build_transform_asd(is_train, args)    
     elif args.dataset == 'DAPT':
         transform = build_transform_DAPT(is_train, args)
+    elif args.dataset == 'aihub':
+        transform = build_transform_aihub(is_train, args)
     elif args.dataset == 'pcb_asd':
         transform = build_transform_pcb_asd(is_train, args)
     elif args.dataset == 'sketch_imagenet':    
@@ -51,9 +53,9 @@ def build_transform_asd(is_train, args):
                 # transforms.RandomRotation((-5,5)),
                 # transforms.RandomHorizontalFlip(0.5),
                 transforms.ToTensor(),
-                # ThresholdTransform(10),
+                # ThresholdTransform(20),
                 transforms.Normalize(mean=[0.5, 0.5, 0.5],
-                                        std=[0.5, 0.5, 0.5])
+                                        std = [0.5,0.5,0.5])
                 ]),
                 'val': transforms.Compose([
                 transforms.Resize((224,224)),
@@ -61,9 +63,9 @@ def build_transform_asd(is_train, args):
                 
                 # transforms.RandomInvert(1),
                 transforms.ToTensor(),
-                # ThresholdTransform(10),
-              transforms.Normalize(mean=[0.5, 0.5, 0.5],
-                                        std=[0.5, 0.5, 0.5])
+                # ThresholdTransform(20),
+                   transforms.Normalize(mean=[0.5, 0.5, 0.5],
+                                        std = [0.5, 0.5, 0.5])
                 ])}
     
     return data_transforms['train'] if is_train else data_transforms['val'] # transforms.Compose(t)
@@ -84,6 +86,28 @@ def build_transform_DAPT(is_train, args):
                 transforms.ToTensor(),
                 transforms.Normalize(mean=[0.95, 0.95, 0.95],
                                         std=[0.1, 0.1, 0.1])
+                ])}
+    
+    return data_transforms['train'] if is_train else data_transforms['val'] # transforms.Compose(t) 
+def build_transform_aihub(is_train, args):
+    data_transforms = {
+            'train': transforms.Compose([
+                # transforms.RandomResizedCrop((224,224),scale=(0.2,1)),
+                transforms.Resize((224,224)),
+                transforms.RandomRotation(degrees=(-10,10)),
+                transforms.RandomHorizontalFlip(0.5),
+                transforms.RandomInvert(0.5),
+                transforms.ToTensor(),
+                transforms.Normalize(mean=[0.5, 0.5, 0.5],
+                                        std=[0.5, 0.5, 0.5])
+                ]),
+                'val': transforms.Compose([
+                # transforms.Resize((256,256)),
+                # transforms.CenterCrop((224,224)),
+                transforms.Resize((224,224)),
+                transforms.ToTensor(),
+                transforms.Normalize(mean=[0.5, 0.5, 0.5],
+                                        std=[0.5, 0.5, 0.5])
                 ])}
     
     return data_transforms['train'] if is_train else data_transforms['val'] # transforms.Compose(t) 

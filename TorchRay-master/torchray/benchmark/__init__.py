@@ -8,7 +8,7 @@ from .datasets import *  # noqa
 from .models import *  # noqa
 import torch
 
-def get_example_data(arch='vgg16', shape=224):
+def get_example_data(arch='vgg16', shape=224, weight=None,img_path=None):
     """Get example data to demonstrate visualization techniques.
 
     Args:
@@ -30,7 +30,6 @@ def get_example_data(arch='vgg16', shape=224):
 
     # Get a network pre-trained on ImageNet.
     # weight='/data/jong980812/project/mae/result/eff_b1/IN_/OUT/07/checkpoint-19.pth'
-    weight='/data/jong980812/project/mae/result/eff_b1/sketch/transform_sketch_imagenet/OUT/07/checkpoint-19.pth'
     
     model = torchvision.models.efficientnet_b1(pretrained=True)
     model.classifier[1] = torch.nn.Linear(1280,2)
@@ -41,6 +40,7 @@ def get_example_data(arch='vgg16', shape=224):
     state_dict = model.state_dict()
     # load pre-trained model
     msg = model.load_state_dict(checkpoint_model, strict=False)
+    print(msg)
     # Switch to eval mode to make the visualization deterministic.
     model.eval()
 
@@ -55,14 +55,14 @@ def get_example_data(arch='vgg16', shape=224):
 
     # url = 'https://encrypted-tbn1.gstatic.com/licensed-image?q=tbn:ANd9GcREj22c-wMNL5IDmU99v8G7voUl17Yxm0JJqMLqttdPT4DnaB99zqVK7HWiNzjP3aZnzCEf-ikAqb2yiDk'
     # response = requests.get(url)
-    img = Image.open('/local_datasets/asd/compact_crop_trimmed_2/07/train/ASD/A10-001-001.jpg')
+    img = Image.open(img_path)
 
     # Pre-process the image and convert into a tensor
     transform = torchvision.transforms.Compose([
         torchvision.transforms.Resize((224,224)),
         torchvision.transforms.ToTensor(),
-        torchvision.transforms.Normalize(mean=[0.485, 0.456, 0.406],
-                                     std=[0.229, 0.224, 0.225])
+        torchvision.transforms.Normalize(mean=[0.5, 0.5, 0.5],
+                                     std=[0.5, 0.5, 0.5])
 
     ])
 
