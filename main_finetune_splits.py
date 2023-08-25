@@ -260,12 +260,8 @@ def main(args):
         pretrained=True if args.finetune is None else False,
         )
         trunc_normal_(model.fc.weight, std=2e-3)
-    elif args.model == 'efficient':
-        model=models.efficientnet_b1(pretrained=True,progress=False, stochastic_depth_prob=args.stochastic_depth_prob)
-        model.classifier[1] = torch.nn.Linear(1280, args.nb_classes)
-        trunc_normal_(model.classifier[1].weight, std=2e-3)
-    elif args.model == 'efficient_relu':
-        model=models.efficientnet_relu_b1(pretrained=True,progress=False, stochastic_depth_prob=args.stochastic_depth_prob)
+    elif 'efficient' in args.model:
+        model=models.efficientnet_b1(weights=models.EfficientNet_B1_Weights.DEFAULT)
         model.classifier[1] = torch.nn.Linear(1280, args.nb_classes)
         trunc_normal_(model.classifier[1].weight, std=2e-3)
     elif 'dense' in args.model:
