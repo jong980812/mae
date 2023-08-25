@@ -71,7 +71,6 @@ def build_transform_asd(is_train, args):
                 ])}
     
     return data_transforms['train'] if is_train else data_transforms['val'] # transforms.Compose(t)
-<<<<<<< HEAD
 
 # TODO
 def build_transform_ai_hub(is_train, args):
@@ -90,27 +89,22 @@ def build_transform_ai_hub(is_train, args):
                 ])}
     
     return data_transforms['train'] if is_train else data_transforms['val'] # transforms.Compose(t)
-    
-=======
 def build_transform_DAPT(is_train, args):
     data_transforms = {
             'train': transforms.Compose([
-                transforms.Resize((224,224)),
-                transforms.RandomRotation(degrees=(-10,10)),
-                transforms.RandomHorizontalFlip(0.5),
-                transforms.Grayscale(3),
+                transforms.Resize((224,168)),
                 transforms.ToTensor(),
-                transforms.Normalize(mean=[0.95, 0.95, 0.95],
+                transforms.Normalize(mean=[0.96, 0.96, 0.96],
                                         std=[0.1, 0.1, 0.1])
                 ]),
                 'val': transforms.Compose([
-                transforms.Resize((224,224)),
-                transforms.Grayscale(3),
+                transforms.Resize((224,168)),
                 transforms.ToTensor(),
-                transforms.Normalize(mean=[0.95, 0.95, 0.95],
+                transforms.Normalize(mean=[0.96, 0.96, 0.96],
                                         std=[0.1, 0.1, 0.1])
                 ])}
->>>>>>> e0a29cc7033725e9fc62c381675f24103d8fd668
+    
+    return data_transforms['train'] if is_train else data_transforms['val'] # transforms.Compose(t)
     
     return data_transforms['train'] if is_train else data_transforms['val'] # transforms.Compose(t) 
 def build_transform_aihub(is_train, args):
@@ -262,10 +256,6 @@ class Part_based_dataset(Dataset):
         xmin, ymin = int(p1[0]), int(p1[1])
         xmax, ymax = int(p2[0]), int(p2[1])
         cropped_img = img.crop([xmin, ymin, xmax, ymax])   #* img.shape = (3, h, w)
-<<<<<<< HEAD
-=======
-        # cropped_img.save("/data/ahngeo11/mae-upstream/ex.png")
->>>>>>> e0a29cc7033725e9fc62c381675f24103d8fd668
         return cropped_img
 
     def __getitem__(self, idx):
@@ -288,7 +278,6 @@ class Part_based_dataset(Dataset):
         if self.part_type == 'head':
             img_head = self._crop_image(image, h, w, anns_dict['head'])
             img_head = self.transform(img_head)   #* transform -> float, (3, h, w)
-<<<<<<< HEAD
             return img_head, label
         
         elif self.part_type == 'upper_body':
@@ -363,17 +352,6 @@ class AI_HUB(Dataset):
         
         assert part_anns['label'] == '사람전체'
         coords = [part_anns['x'], part_anns['y'], part_anns['w'], part_anns['h']]
-=======
-            return img_head, label,self.img_list[idx]
-        elif self.part_type == 'upper_body':
-            img_upper_body = self._crop_image(image, h, w, anns_dict['upper_body'])
-            img_upper_body = self.transform(img_upper_body)
-            return img_upper_body, label,self.img_list[idx]
-        elif self.part_type == 'lower_body':
-            img_lower_body = self._crop_image(image, h, w, anns_dict['lower_body'])
-            img_lower_body = self.transform(img_lower_body)
-            return img_lower_body, label,self.img_list[idx]
->>>>>>> e0a29cc7033725e9fc62c381675f24103d8fd668
 
         sample = self._crop_image(sample, coords)
         sample = self.transform(sample) 
