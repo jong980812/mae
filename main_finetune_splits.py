@@ -32,7 +32,7 @@ import util.misc as misc
 from util.datasets import build_dataset
 from util.pos_embed import interpolate_pos_embed
 from util.misc import NativeScalerWithGradNormCount as NativeScaler
-from util.visualizer import plot_acc_data,plot_loss_data
+from util.visualizer import plot_acc_data,plot_loss_data,extract_values
 from util.freeze import unfreeze_block
 import util.model
 import util.model_rpp
@@ -260,8 +260,12 @@ def main(args):
         pretrained=True if args.finetune is None else False,
         )
         trunc_normal_(model.fc.weight, std=2e-3)
-    elif 'efficient' in args.model:
-        model=models.efficientnet_b1(weights=models.EfficientNet_B1_Weights.DEFAULT)
+    elif 'efficient' == args.model:
+        model=models.efficientnet_b1(pretrained=True)
+        model.classifier[1] = torch.nn.Linear(1280, args.nb_classes)
+        trunc_normal_(model.classifier[1].weight, std=2e-3)
+    elif 'efficient_relu' == args.model:
+        model=models.efficientnet_relu_b1(pretrained=True)
         model.classifier[1] = torch.nn.Linear(1280, args.nb_classes)
         trunc_normal_(model.classifier[1].weight, std=2e-3)
     elif 'dense' in args.model:
@@ -302,7 +306,7 @@ def main(args):
             checkpoint_model = checkpoint['model']
             state_dict = model.state_dict()
             for k in ['head.weight', 'head.bias','fc.weight','fc.bias','classifier.1.weight','classifier.1.bias']:
-                if k in checkpoint_model and checkpoint_model[k].shape != state_dict[k].shape:
+                if k in checkpoint_model: #and checkpoint_model[k].shape != state_dict[k].shape:
                     print(f"Removing key {k} from pretrained checkpoint")
                     del checkpoint_model[k]
 
@@ -424,9 +428,11 @@ def main(args):
     total_time = time.time() - start_time
     total_time_str = str(datetime.timedelta(seconds=int(total_time)))
     print('Training time {}'.format(total_time_str))
-    plot_acc_data(txt_dir,super_output_dir,args.split_path)
+    std=plot_acc_data(txt_dir,super_output_dir,args.split_path)
     plot_loss_data(txt_dir,super_output_dir,args.split_path)
-    return max_accuracy if args.max_acc else test_stats['acc1']
+    # accs= extract_values(txt_dir,'test_acc1')
+    # np.std(accs)
+    return max_accuracy if args.max_acc else test_stats['acc1'], std
 
 if __name__ == '__main__':
     args = get_args_parser()
@@ -436,6 +442,7 @@ if __name__ == '__main__':
     super_output_dir=args.output_dir  #! save origianl out path
     sub_data_path=sorted(os.listdir(super_data_path))   #! get list about splits folder name
     accs=[]
+    stds=[]
     print(f"{len(sub_data_path)} datasets training starts\n\n")
     for split_path in sub_data_path:
         if int(split_path)>1:
@@ -448,9 +455,11 @@ if __name__ == '__main__':
         print(f"{split_path}th model training start!\nData Dir: {args.data_path}")
         args.split_path = split_path
         print(args.data_path,args.split_path)
-        test_acc1=main(args)
+        test_acc1,std=main(args)
         accs.append(test_acc1)
+        stds.append(std)
         with open(os.path.join(super_output_dir, "00_Total_acc.txt"), mode="a", encoding="utf-8") as f:
             f.write(f"{split_path} final Top 1 acc: {test_acc1}\n")
     with open(os.path.join(super_output_dir, "00_Total_acc.txt"), mode="a", encoding="utf-8") as f:
         f.write(f"Average Acc : {sum(accs)/len(accs)}\n")
+        f.write(f"Average Std : {sum(stds)/len(stds)}\n")

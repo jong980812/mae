@@ -1,7 +1,7 @@
 import matplotlib.pyplot as plt
 import json
 import os
-
+import numpy as np
 # Function to extract values from the log file
 def extract_values(file_path, key):
     values = []
@@ -37,11 +37,12 @@ def plot_acc_data(file_path,outputdir,split):
         else:
             plt.scatter(mark, max_acc, marker='o', color='r')
         
-    plt.xlabel(x_key)
+    plt.xlabel(f'STD:{np.std(y_values)}')
     plt.ylabel(y_key)
     plt.title(y_key)
     plt.legend()
     plt.savefig(os.path.join(outputdir,f'{split}_test_acc.png'))
+    return np.std(y_values)
 
 def plot_loss_data(file_path, outputdir,split):
     plt.cla()

@@ -21,13 +21,15 @@ def build_dataset(is_train, args):
         mode = "train" if is_train else "val"
         return Part_based_dataset(args.data_path, args.json_path, mode, args.part_type)
     elif args.dataset == 'ai_hub' :
+        print(dataset)
+        
         return AI_HUB(args.data_path, args.json_path, is_train)
     elif args.dataset == 'asd':
         transform = build_transform_asd(is_train, args)    
     elif args.dataset == 'DAPT':
         transform = build_transform_DAPT(is_train, args)
-    elif args.dataset == 'aihub':
-        transform = build_transform_aihub(is_train, args)
+    # elif args.dataset == 'aihub':
+    #     transform = build_transform_aihub(is_train, args)
     elif args.dataset == 'pcb_asd':
         transform = build_transform_pcb_asd(is_train, args)
     elif args.dataset == 'sketch_imagenet':    
@@ -52,20 +54,21 @@ def build_transform_asd(is_train, args):
                 transforms.Resize((224,224)),
                 # transforms.Grayscale(3),
                 # transforms.RandomInvert(1),
-                # transforms.RandomRotation((-5,5)),
+                # transforms.RandomRotation((180,180)),
                 # transforms.RandomHorizontalFlip(0.5),
                 transforms.ToTensor(),
-                # ThresholdTransform(20),
+                # ThresholdTransform(245),
                 transforms.Normalize(mean=[0.5, 0.5, 0.5],
                                         std = [0.5,0.5,0.5])
                 ]),
                 'val': transforms.Compose([
                 transforms.Resize((224,224)),
                 # transforms.Grayscale(3),
+                # transforms.RandomRotation((180,180)),
                 
                 # transforms.RandomInvert(1),
                 transforms.ToTensor(),
-                # ThresholdTransform(20),
+                # ThresholdTransform(245),
                    transforms.Normalize(mean=[0.5, 0.5, 0.5],
                                         std = [0.5, 0.5, 0.5])
                 ])}
@@ -73,22 +76,22 @@ def build_transform_asd(is_train, args):
     return data_transforms['train'] if is_train else data_transforms['val'] # transforms.Compose(t)
 
 # TODO
-def build_transform_ai_hub(is_train, args):
-    data_transforms = {
-            'train': transforms.Compose([
-                transforms.Resize((224,168)),
-                transforms.ToTensor(),
-                transforms.Normalize(mean=[0.96, 0.96, 0.96],
-                                        std=[0.1, 0.1, 0.1])
-                ]),
-                'val': transforms.Compose([
-                transforms.Resize((224,168)),
-                transforms.ToTensor(),
-                transforms.Normalize(mean=[0.96, 0.96, 0.96],
-                                        std=[0.1, 0.1, 0.1])
-                ])}
+# def build_transform_ai_hub(is_train, args):
+#     data_transforms = {
+#             'train': transforms.Compose([
+#                 transforms.Resize((224,168)),
+#                 transforms.ToTensor(),
+#                 transforms.Normalize(mean=[0.96, 0.96, 0.96],
+#                                         std=[0.1, 0.1, 0.1])
+#                 ]),
+#                 'val': transforms.Compose([
+#                 transforms.Resize((224,168)),
+#                 transforms.ToTensor(),
+#                 transforms.Normalize(mean=[0.96, 0.96, 0.96],
+#                                         std=[0.1, 0.1, 0.1])
+#                 ])}
     
-    return data_transforms['train'] if is_train else data_transforms['val'] # transforms.Compose(t)
+#     return data_transforms['train'] if is_train else data_transforms['val'] # transforms.Compose(t)
 def build_transform_DAPT(is_train, args):
     data_transforms = {
             'train': transforms.Compose([
@@ -112,9 +115,9 @@ def build_transform_aihub(is_train, args):
             'train': transforms.Compose([
                 # transforms.RandomResizedCrop((224,224),scale=(0.2,1)),
                 transforms.Resize((224,224)),
+                # transforms.RandomInvert(1.),
                 transforms.RandomRotation(degrees=(-10,10)),
                 transforms.RandomHorizontalFlip(0.5),
-                transforms.RandomInvert(0.5),
                 transforms.ToTensor(),
                 transforms.Normalize(mean=[0.5, 0.5, 0.5],
                                         std=[0.5, 0.5, 0.5])
@@ -123,6 +126,7 @@ def build_transform_aihub(is_train, args):
                 # transforms.Resize((256,256)),
                 # transforms.CenterCrop((224,224)),
                 transforms.Resize((224,224)),
+                # transforms.RandomInvert(1.),
                 transforms.ToTensor(),
                 transforms.Normalize(mean=[0.5, 0.5, 0.5],
                                         std=[0.5, 0.5, 0.5])
@@ -316,20 +320,19 @@ class Part_based_dataset(Dataset):
         
 class AI_HUB(Dataset):
     def __init__(self, root_dir, json_dir, is_train):
-        self.transform = build_transform_asd(is_train, None)
+        self.transform = build_transform_aihub(is_train, None)
         mode = "train" if is_train else "val"
         self.data_path = os.path.join(root_dir, mode) 
-        self.json_path = os.path.join(json_dir, mode) 
-        self.class_ind = {'m': 0, 'w': 1}
+        self.json_path = json_dir 
         self.ext = "jpg"
-
+        print(self.transform)
+        self.dataset = datasets.ImageFolder(self.data_path, None)
+        self.class_ind = self.dataset.class_to_idx
+        self.img_path_list = [elem[0] for elem in self.dataset.make_dataset(self.data_path, self.class_ind, extensions=self.ext)]
         print("img_root_dir : ", self.data_path)
         print("json_root_dir : ", self.json_path)
-        print("class_ind : ", self.class_ind)
         print("extension : ", self.ext)
-
-        self.dataset = datasets.ImageFolder(self.data_path, None)
-        self.img_path_list = [elem[0] for elem in self.dataset.make_dataset(self.data_path, self.class_ind, extensions=self.ext)]
+        print("class_ind : ", self.class_ind)
 
     def __len__(self):
         return self.dataset.__len__()
@@ -345,9 +348,7 @@ class AI_HUB(Dataset):
         sample, label = self.dataset[idx]
 
         json_name = self.img_path_list[idx].split('/')[-1].split('.')[0] + ".json"
-        class_name = json_name[0]
-        assert class_name in ['m', 'w']
-        with open(os.path.join(self.json_path, class_name, json_name), 'r') as f :   
+        with open(os.path.join(self.json_path, json_name), 'r') as f :   
             part_anns = json.load(f)['annotations']['bbox'][0]
         
         assert part_anns['label'] == '사람전체'
@@ -355,4 +356,4 @@ class AI_HUB(Dataset):
 
         sample = self._crop_image(sample, coords)
         sample = self.transform(sample) 
-        return sample, label
+        return sample, label, json_name

@@ -84,9 +84,9 @@ if __name__ == '__main__':
          "gradcamelementwise": GradCAMElementWise}
 
     # model = models.resnet50(pretrained=True)
-    model=models.efficientnet_relu_b1(pretrained=True,progress=False)
+    model=models.efficientnet_b1(pretrained=True,progress=False)
     model.classifier[1] = torch.nn.Linear(1280, 2)
-    weight='/data/jong980812/project/mae/result_ver2/All_9split/efficient_relu/norm_0.5/bs4_1e-2/OUT/05/checkpoint-29.pth'
+    weight='/data/jong980812/project/mae/result_ver2/All_5split/norm_0.5_224_224/OUT/02/checkpoint-29.pth'
     checkpoint = torch.load(weight, map_location='cpu')
     print("Load pre-trained checkpoint from: %s" % weight)
     checkpoint_model = checkpoint['model']
