@@ -14,7 +14,7 @@ import PIL
 from torchvision import datasets, transforms
 from timm.data import create_transform
 from timm.data.constants import IMAGENET_DEFAULT_MEAN, IMAGENET_DEFAULT_STD
-from util.custom_transform import ThresholdTransform
+from util.custom_transform import ThresholdTransform,AddNoise
 
 def build_dataset(is_train, args):
     if args.dataset == 'asd_part_based' :
@@ -58,8 +58,8 @@ def build_transform_asd(is_train, args):
                 # transforms.RandomHorizontalFlip(0.5),
                 transforms.ToTensor(),
                 # ThresholdTransform(245),
-                transforms.Normalize(mean=[0.5, 0.5, 0.5],
-                                        std = [0.5,0.5,0.5])
+                # transforms.Normalize(mean=[0.5, 0.5, 0.5],
+                #                         std = [0.5,0.5,0.5])
                 ]),
                 'val': transforms.Compose([
                 transforms.Resize((224,224)),
@@ -69,8 +69,8 @@ def build_transform_asd(is_train, args):
                 # transforms.RandomInvert(1),
                 transforms.ToTensor(),
                 # ThresholdTransform(245),
-                   transforms.Normalize(mean=[0.5, 0.5, 0.5],
-                                        std = [0.5, 0.5, 0.5])
+                #    transforms.Normalize(mean=[0.5, 0.5, 0.5],
+                #                         std = [0.5, 0.5, 0.5])
                 ])}
     
     return data_transforms['train'] if is_train else data_transforms['val'] # transforms.Compose(t)
