@@ -57,7 +57,7 @@ class BaseCAM:
             cam = get_2d_projection(weighted_activations)
         else:
             cam = weighted_activations.sum(axis=1)
-        return cam
+        return cam, activations, weights
 
     def forward(self,
                 input_tensor: torch.Tensor,
@@ -98,10 +98,10 @@ class BaseCAM:
         # This gives you more flexibility in case you just want to
         # use all conv layers for example, all Batchnorm layers,
         # or something else.
-        cam_per_layer = self.compute_cam_per_layer(input_tensor,
+        cam_per_layer,activations, weights  = self.compute_cam_per_layer(input_tensor,
                                                    targets,
                                                    eigen_smooth)
-        return self.aggregate_multi_layers(cam_per_layer),target_categories
+        return self.aggregate_multi_layers(cam_per_layer),target_categories,activations, weights 
 #! 여기서 모델이 predict한거내뱉어줘서 밖에서사용.
     def get_target_width_height(self,
                                 input_tensor: torch.Tensor) -> Tuple[int, int]:
@@ -131,7 +131,7 @@ class BaseCAM:
             if i < len(grads_list):
                 layer_grads = grads_list[i]
 
-            cam = self.get_cam_image(input_tensor,
+            cam,activations, weights = self.get_cam_image(input_tensor,
                                      target_layer,
                                      targets,
                                      layer_activations,
@@ -141,7 +141,7 @@ class BaseCAM:
             scaled = scale_cam_image(cam, target_size)
             cam_per_target_layer.append(scaled[:, None, :])
 
-        return cam_per_target_layer
+        return cam_per_target_layer,activations, weights 
 
     def aggregate_multi_layers(
             self,

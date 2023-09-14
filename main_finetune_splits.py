@@ -263,6 +263,7 @@ def main(args):
     elif 'efficient' == args.model:
         model=models.efficientnet_b1(pretrained=True)
         model.classifier[1] = torch.nn.Linear(1280, args.nb_classes)
+        model.classifier[0] = torch.nn.Dropout(p=args.dropout)
         trunc_normal_(model.classifier[1].weight, std=2e-3)
     elif 'efficient_relu' == args.model:
         model=models.efficientnet_relu_b1(pretrained=True)
