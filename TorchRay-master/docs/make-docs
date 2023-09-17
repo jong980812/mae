@@ -1,3 +1,0 @@
-#!/bin/bash
-PYTHON=${PYTHON:-python}
-${PYTHON} -m sphinx -b html docs docs/html
