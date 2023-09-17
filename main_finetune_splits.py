@@ -41,7 +41,6 @@ import models_vit
 import torchvision.models as models
 from util.custom_transform import set_conv_padding_mode
 
-
 def get_args_parser():
     parser = argparse.ArgumentParser('MAE fine-tuning for image classification', add_help=False)
     parser.add_argument('--batch_size', default=64, type=int,
@@ -166,7 +165,7 @@ def get_args_parser():
     parser.add_argument('--unfreeze_layers', default=None, nargs='+', type=str)
     parser.add_argument('--dropout', default=0.2,type=float)
     parser.add_argument('--stochastic_depth_prob',default=0.2,type=float)
-    parser.add_argument('--padding_mode',default='replicate',type=str)
+    parser.add_argument('--padding_mode',default='zeros',type=str)
     
     return parser
 
@@ -266,7 +265,7 @@ def main(args):
         model=models.efficientnet_b1(pretrained=True)
         model.classifier[1] = torch.nn.Linear(1280, args.nb_classes)
         model.classifier[0] = torch.nn.Dropout(p=args.dropout)
-        set_conv_padding_mode(model, padding_mode=args.padding_mode)
+        set_conv_padding_mode(model,padding_mode=args.padding_mode)
         trunc_normal_(model.classifier[1].weight, std=2e-3)
     elif 'efficient_relu' == args.model:
         model=models.efficientnet_relu_b1(pretrained=True)
