@@ -19,3 +19,11 @@ class DetachWhite(object):
   def __call__(self, x):
     self.detach_pixel=x[:,:self.pixel]
     return (self.detach_pixel)
+  
+  
+  
+def set_conv_padding_mode(model, padding_mode='zeros'):
+  for name, layer in model.named_modules():
+      if isinstance(layer, torch.nn.Conv2d):
+          layer.padding_mode = padding_mode
+          #!'zeros', 'reflect', 'replicate' or 'circular'. Default: 'zeros'

@@ -29,7 +29,7 @@ def get_example_data(arch='vgg16', shape=224, weight=None,img_path=None):
     """
 
     # Get a network pre-trained on ImageNet.
-    # weight='/data/jong980812/project/mae/result/eff_b1/IN_/OUT/07/checkpoint-19.pth'
+    # weight='/data/jong980812/project/mae/result_ver2/All_5split/bs4_1e-2_no_norm/OUT/01/checkpoint-29.pth'
     
     model = torchvision.models.efficientnet_b1(pretrained=True)
     model.classifier[1] = torch.nn.Linear(1280,2)
@@ -59,10 +59,10 @@ def get_example_data(arch='vgg16', shape=224, weight=None,img_path=None):
 
     # Pre-process the image and convert into a tensor
     transform = torchvision.transforms.Compose([
-        torchvision.transforms.Resize((224,224)),
+        torchvision.transforms.Resize(shape),
         torchvision.transforms.ToTensor(),
-        torchvision.transforms.Normalize(mean=[0.5, 0.5, 0.5],
-                                     std=[0.5, 0.5, 0.5])
+        # torchvision.transforms.Normalize(mean=[0.5, 0.5, 0.5],
+        #                              std=[0.5, 0.5, 0.5])
 
     ])
 

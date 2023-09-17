@@ -3,7 +3,7 @@ from torchray.benchmark import get_example_data, plot_example
 from torchray.utils import get_device
 
 # Obtain example data.
-model, x, category_id_1, category_id_2 = get_example_data()
+model, x, category_id_1, category_id_2 = get_example_data(img_path='/data/datasets/asd/All_5split/01/val/ASD/A-2-o2.jpg')
 
 # Run on GPU if available.
 device = get_device()

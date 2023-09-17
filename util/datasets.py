@@ -21,9 +21,9 @@ def build_dataset(is_train, args):
         mode = "train" if is_train else "val"
         return Part_based_dataset(args.data_path, args.json_path, mode, args.part_type)
     elif args.dataset == 'ai_hub' :
+        dataset=AI_HUB(args.data_path, args.json_path, is_train)
         print(dataset)
-        
-        return AI_HUB(args.data_path, args.json_path, is_train)
+        return dataset
     elif args.dataset == 'asd':
         transform = build_transform_asd(is_train, args)    
     elif args.dataset == 'DAPT':
@@ -51,31 +51,31 @@ def build_dataset(is_train, args):
 def build_transform_asd(is_train, args):
     data_transforms = {
             'train': transforms.Compose([
-                transforms.Resize((224,224)),
+                transforms.Resize((256,256)),
                 # transforms.RandomCrop((224,224)),
                 # transforms.Grayscale(3),
                 # transforms.RandomInvert(1),
                 # transforms.RandomRotation((180,180)),
                 # transforms.RandomHorizontalFlip(0.5),
                 transforms.ToTensor(),
-                DetachWhite(30),
+                # DetachWhite(30),
                 # AddNoise(50),
-                # ThresholdTransform(245),
+                # ThresholdTransform(30),
                 # transforms.Normalize(mean=[0.5, 0.5, 0.5],
                 #                         std = [0.5,0.5,0.5])
                 ]),
                 'val': transforms.Compose([
-                transforms.Resize((224,224)),
+                transforms.Resize((256,256)),
                 # transforms.CenterCrop((224,224)),
                 # transforms.Grayscale(3),
                 # transforms.RandomRotation((180,180)),
                 
                 # transforms.RandomInvert(1),
                 transforms.ToTensor(),
-                DetachWhite(30),
+                # DetachWhite(30),
                 
                 # AddNoise(50)
-                # ThresholdTransform(245),
+                # ThresholdTransform(30),
                 #    transforms.Normalize(mean=[0.5, 0.5, 0.5],
                 #                         std = [0.5, 0.5, 0.5])
                 ])}
@@ -108,7 +108,7 @@ def build_transform_DAPT(is_train, args):
                 transforms.RandomHorizontalFlip(0.5),
                 transforms.ToTensor(),
                 # transforms.Normalize(mean=[0.93, 0.93, 0.93],
-                                        # std=[0.1, 0.1, 0.1])
+                #                         std=[0.1, 0.1, 0.1])
                 ]),
                 'val': transforms.Compose([
                 transforms.Resize((224,168)),
@@ -131,8 +131,8 @@ def build_transform_aihub(is_train, args):
                 transforms.RandomRotation(degrees=(-10,10)),
                 transforms.RandomHorizontalFlip(0.5),
                 transforms.ToTensor(),
-                transforms.Normalize(mean=[0.5, 0.5, 0.5],
-                                        std=[0.5, 0.5, 0.5])
+                # transforms.Normalize(mean=[0.5, 0.5, 0.5],
+                #                         std=[0.5, 0.5, 0.5])
                 ]),
                 'val': transforms.Compose([
                 # transforms.Resize((256,256)),
@@ -368,4 +368,4 @@ class AI_HUB(Dataset):
 
         sample = self._crop_image(sample, coords)
         sample = self.transform(sample) 
-        return sample, label, json_name
+        return sample, label #json_name
