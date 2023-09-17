@@ -1,4 +1,5 @@
 import torch
+
 class ThresholdTransform(object):
   def __init__(self, thr_255):
     self.thr = thr_255 /255.0  # input threshold for [0..255] gray level, convert to [0..1]
@@ -19,3 +20,8 @@ class DetachWhite(object):
   def __call__(self, x):
     self.detach_pixel=x[:,:self.pixel]
     return (self.detach_pixel)
+  
+def set_conv_padding_mode(model, padding_mode='replicate'):
+  for name, layer in model.named_modules():
+      if isinstance(layer, torch.nn.Conv2d):
+          layer.padding_mode = padding_mode

@@ -39,6 +39,7 @@ import util.model_rpp
 import util.scratch_cnn
 import models_vit
 import torchvision.models as models
+from util.custom_transform import set_conv_padding_mode
 
 
 def get_args_parser():
@@ -152,7 +153,7 @@ def get_args_parser():
     # distributed training parameters
     parser.add_argument('--world_size', default=1, type=int,
                         help='number of distributed processes')
-    parser.add_argument('--local_rank', default=-1, type=int)
+    parser.add_argument('--local-rank', default=-1, type=int)
     parser.add_argument('--dist_on_itp', action='store_true')
     parser.add_argument('--dist_url', default='env://',
                         help='url used to set up distributed training')
@@ -165,6 +166,7 @@ def get_args_parser():
     parser.add_argument('--unfreeze_layers', default=None, nargs='+', type=str)
     parser.add_argument('--dropout', default=0.2,type=float)
     parser.add_argument('--stochastic_depth_prob',default=0.2,type=float)
+    parser.add_argument('--padding_mode',default='replicate',type=str)
     
     return parser
 
@@ -264,6 +266,7 @@ def main(args):
         model=models.efficientnet_b1(pretrained=True)
         model.classifier[1] = torch.nn.Linear(1280, args.nb_classes)
         model.classifier[0] = torch.nn.Dropout(p=args.dropout)
+        set_conv_padding_mode(model, padding_mode=args.padding_mode)
         trunc_normal_(model.classifier[1].weight, std=2e-3)
     elif 'efficient_relu' == args.model:
         model=models.efficientnet_relu_b1(pretrained=True)

@@ -58,7 +58,7 @@ def build_transform_asd(is_train, args):
                 # transforms.RandomRotation((180,180)),
                 # transforms.RandomHorizontalFlip(0.5),
                 transforms.ToTensor(),
-                DetachWhite(30),
+                # DetachWhite(30),
                 # AddNoise(50),
                 # ThresholdTransform(245),
                 # transforms.Normalize(mean=[0.5, 0.5, 0.5],
@@ -72,7 +72,7 @@ def build_transform_asd(is_train, args):
                 
                 # transforms.RandomInvert(1),
                 transforms.ToTensor(),
-                DetachWhite(30),
+                # DetachWhite(30),
                 
                 # AddNoise(50)
                 # ThresholdTransform(245),
