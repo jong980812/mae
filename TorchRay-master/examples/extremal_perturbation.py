@@ -15,7 +15,7 @@ masks_1, _ = extremal_perturbation(
     model, x, category_id_1,
     reward_func=contrastive_reward,
     debug=True,
-    areas=[0.05],
+    areas=[0.05,0.2],
 )
 plot_example(x, masks_1, 'extremal perturbation', category_id_1,save_path='/data/jong980812/project/mae/TD_4_0.jpg')
 

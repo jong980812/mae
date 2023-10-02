@@ -688,4 +688,4 @@ def extremal_perturbation(model,
             padding_mode='constant'
         )
 
-    return mask_, hist
+    return mask_, hist, y

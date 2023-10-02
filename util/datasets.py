@@ -128,7 +128,7 @@ def build_transform_aihub(is_train, args):
                 # transforms.RandomResizedCrop((224,224),scale=(0.2,1)),
                 transforms.Resize((224,224)),
                 # transforms.RandomInvert(1.),
-                transforms.RandomRotation(degrees=(-10,10)),
+                # transforms.RandomRotation(degrees=(-10,10)),
                 transforms.RandomHorizontalFlip(0.5),
                 transforms.ToTensor(),
                 # transforms.Normalize(mean=[0.5, 0.5, 0.5],
