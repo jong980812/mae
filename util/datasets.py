@@ -51,7 +51,7 @@ def build_dataset(is_train, args):
 def build_transform_asd(is_train, args):
     data_transforms = {
             'train': transforms.Compose([
-                transforms.Resize((256,256)),
+                transforms.Resize((224,168)),
                 # transforms.RandomCrop((224,224)),
                 # transforms.Grayscale(3),
                 # transforms.RandomInvert(1),
@@ -60,12 +60,12 @@ def build_transform_asd(is_train, args):
                 transforms.ToTensor(),
                 # DetachWhite(30),
                 # AddNoise(50),
-                # ThresholdTransform(30),
+                ThresholdTransform(250),
                 # transforms.Normalize(mean=[0.5, 0.5, 0.5],
                 #                         std = [0.5,0.5,0.5])
                 ]),
                 'val': transforms.Compose([
-                transforms.Resize((256,256)),
+                transforms.Resize((224,168)),
                 # transforms.CenterCrop((224,224)),
                 # transforms.Grayscale(3),
                 # transforms.RandomRotation((180,180)),
@@ -75,7 +75,7 @@ def build_transform_asd(is_train, args):
                 # DetachWhite(30),
                 
                 # AddNoise(50)
-                # ThresholdTransform(30),
+                ThresholdTransform(250),
                 #    transforms.Normalize(mean=[0.5, 0.5, 0.5],
                 #                         std = [0.5, 0.5, 0.5])
                 ])}
