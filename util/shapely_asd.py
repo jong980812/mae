@@ -22,7 +22,7 @@ data_path='/data/datasets/asd/All_5split/01/val/TD/'
 # data_path='/data/datasets/ai_hub_sketch_4way/01/val/m_w'
 # data_path='/data/datasets/ai_hub/ai_hub_sketch_mw/01/val/w/'
 import random
-weight='/data/jong980812/project/mae/result_ver2/All_5split/padding_mode_reflect/OUT/02/checkpoint-29.pth'
+weight='/data/jong980812/project/mae/result_ver2/All_5split/binary_240/OUT/02/checkpoint-29.pth'
 checkpoint = torch.load(weight, map_location='cpu')
 print("Load pre-trained checkpoint from: %s" % weight)
 checkpoint_model = checkpoint['model']
@@ -34,10 +34,10 @@ def set_conv_padding_mode(model, padding_mode='replicate'):
           layer.padding_mode = padding_mode
 set_conv_padding_mode(model,padding_mode='replicate')
 model.eval()
-def get_shapely_matrix(all_ordered_pair, correct_output):
-    shapely_values = torch.zeros_like(all_ordered_pair, dtype=torch.float32)
+def get_shapley_matrix(all_ordered_pair, correct_output):
+    shapley_values = torch.zeros_like(all_ordered_pair, dtype=torch.float32)
 
-    # 각 ordered pair에 대한 값을 가져와 shapely_values에 저장
+    # 각 ordered pair에 대한 값을 가져와 shapley_values에 저장
     for a,ordered_pairs in enumerate(all_ordered_pair):
         for i, ordered_pair in enumerate(ordered_pairs):
             # ordered_pair를 인덱스로 사용하여 correct_output에서 값을 가져옴
@@ -46,8 +46,8 @@ def get_shapely_matrix(all_ordered_pair, correct_output):
             values1 = correct_output[int(indices[0])]
             values2 = correct_output[int(indices[1])]  # correct_output에서 해당 위치의 값 가져오기
             # print(values1,values2)
-            shapely_values[a,i] = torch.cat([values1.unsqueeze(0),values2.unsqueeze(0)],dim=0)
-    return shapely_values
+            shapley_values[a,i] = torch.cat([values1.unsqueeze(0),values2.unsqueeze(0)],dim=0)
+    return shapley_values
 def binary_to_decimal(binary_tuple):
     decimal_value = 0
     binary_length = len(binary_tuple)
@@ -112,12 +112,14 @@ def get_ordered_pair():
             # 결과를 weights에 저장
             weights[i, j] = weight
     return all_ordered_pair, weights
-class shapely_part(Dataset):
-    def __init__(self, data_folder, json_folder, binary_thresholding=None, transform=None):
+class shapley_part(Dataset):
+    def __init__(self, data_folder, json_folder,part, binary_thresholding=None, transform=None):
         self.json_folder = json_folder
         self.data_folder = data_folder
         self.binary_thresholding=binary_thresholding
         self.transform = transform
+        self.part = part
+        self.num_part = len(part)
         self.image_paths = [os.path.join(data_folder, f) for f in os.listdir(data_folder) if f.endswith(('.png', '.jpg', '.jpeg', '.gif'))]
         self.json_paths = [image_path.split('/')[-1].split('.')[0] + ".json" for image_path in self.image_paths] #! Get json path from image paths.
         print(self.image_paths)
@@ -272,7 +274,7 @@ class shapely_part(Dataset):
         print(img_path)
         label = 0 if (img_path.split('/')[-1].split('.')[0].split('-')[0])=='A' else 1
         image = Image.open(img_path)
-        part_name = ["head", "eye", "nose", "ear", "mouth", "hand", "foot", "upper_body", "lower_body"]
+        part_name = self.part#["head", "eye", "nose", "ear", "mouth", "hand", "foot", "upper_body", "lower_body"]
         if self.binary_thresholding:
             image = image.convert("L")#! Convert grayscale
             image = image.point(lambda p: p > self.binary_thresholding and 255)
@@ -317,19 +319,22 @@ class shapely_part(Dataset):
 
 
 if __name__=="__main__":
-    transform= transforms.Compose([transforms.Resize((224,168)),transforms.ToTensor()])
-    dataset = shapely_part('/data/jong980812/project/mae/util','/data/jong980812/project/mae/util',240,transform=transform)
-    data_loader=DataLoader(dataset,2,num_workers=4)
+    transform= transforms.Compose([transforms.Resize((224,224)),transforms.ToTensor()])
+    part_name = ["head", "eye", "nose", "ear", "mouth", "hand", "foot", "upper_body", "lower_body"]
+    dataset = shapley_part('/data/jong980812/project/mae/util/shapley/TD','/data/jong980812/project/mae/util/shapley/TD',part_name,240,transform=transform)
+    data_loader=DataLoader(dataset,5,num_workers=4)
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    
-    
     all_ordered_pair,weights = get_ordered_pair()
+    part_number = all_ordered_pair.shape[0]
+    part_count = {i: 0 for i in range(part_number)}
+    num_correct = 0
     for new_imgs,original_image,label in data_loader:
-        print(new_imgs.shape)
+        # print(new_imgs.shape)
         input_data = new_imgs
-        print('complete')
+        # print('complete')
         batch_size = input_data.shape[0]
         input_data = rearrange(input_data,  'b t c h w -> (b t) c h w')
+        
         
         model.to(device)
         input_data = input_data.to(device)
@@ -340,12 +345,19 @@ if __name__=="__main__":
             prediction = model(original_image)
             output=model(input_data)
         output = rearrange(output, '(b t) o -> b t o', b=batch_size) # batch_size, 128, output(2)
-        print(output.shape)
-        print(label)
+        prediction = prediction.argmax(1)
+        # print(output.shape)
+        # print(label)
+        
         for i in range(batch_size):
-            correct_output = output[:,:,label[i]]# Take correct logits,  (b, 128), 밖에서. 
-            shapely_matrix = get_shapely_matrix(all_ordered_pair,correct_output[i])
-            shapely_contributions = shapely_matrix[:,:,1] - shapely_matrix[:,:,0] 
-            shapely_value = (shapely_contributions * 1/weights).sum(dim=1)
-            print(shapely_value)
-        print(prediction)
+            if prediction[i] == label[i]:
+                num_correct +=1
+                correct_output = output[:,:,label[i]]# Take correct logits,  (b, 128), 밖에서. 
+                shapley_matrix = get_shapley_matrix(all_ordered_pair,correct_output[i])
+                shapley_contributions = shapley_matrix[:,:,1] - shapley_matrix[:,:,0] 
+                shapley_value = (shapley_contributions * 1/weights).sum(dim=1)
+                max_part_number = (int(shapley_value.argmax()))
+                part_count[max_part_number] += 1
+    print(part_count)
+    print(num_correct)
+        
