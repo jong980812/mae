@@ -82,23 +82,6 @@ def build_transform_asd(is_train, args):
     
     return data_transforms['train'] if is_train else data_transforms['val'] # transforms.Compose(t)
 
-# TODO
-# def build_transform_ai_hub(is_train, args):
-#     data_transforms = {
-#             'train': transforms.Compose([
-#                 transforms.Resize((224,168)),
-#                 transforms.ToTensor(),
-#                 transforms.Normalize(mean=[0.96, 0.96, 0.96],
-#                                         std=[0.1, 0.1, 0.1])
-#                 ]),
-#                 'val': transforms.Compose([
-#                 transforms.Resize((224,168)),
-#                 transforms.ToTensor(),
-#                 transforms.Normalize(mean=[0.96, 0.96, 0.96],
-#                                         std=[0.1, 0.1, 0.1])
-#                 ])}
-    
-#     return data_transforms['train'] if is_train else data_transforms['val'] # transforms.Compose(t)
 def build_transform_DAPT(is_train, args):
     data_transforms = {
             'train': transforms.Compose([
@@ -128,12 +111,12 @@ def build_transform_aihub(is_train, args):
                 # transforms.RandomResizedCrop((224,224),scale=(0.2,1)),
                 transforms.Resize((224,224)),
                 # transforms.RandomInvert(1.),
-                transforms.Grayscale(3),
+                # transforms.Grayscale(3),
                 
                 # transforms.RandomRotation(degrees=(-10,10)),
                 transforms.RandomHorizontalFlip(0.5),
                 transforms.ToTensor(),
-                ThresholdTransform(240)
+                # ThresholdTransform(240)
                 # transforms.Normalize(mean=[0.5, 0.5, 0.5],
                 #                         std=[0.5, 0.5, 0.5])
                 ]),
@@ -141,11 +124,11 @@ def build_transform_aihub(is_train, args):
                 # transforms.Resize((256,256)),
                 # transforms.CenterCrop((224,224)),
                 transforms.Resize((224,224)),
-                transforms.Grayscale(3),
+                # transforms.Grayscale(3),
                 
                 # transforms.RandomInvert(1.),
                 transforms.ToTensor(),
-                ThresholdTransform(240)
+                # ThresholdTransform(240)
                 
                 # transforms.Normalize(mean=[0.5, 0.5, 0.5],
                 #                         std=[0.5, 0.5, 0.5])

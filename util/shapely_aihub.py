@@ -19,7 +19,6 @@ import torchvision
 # model=torchvision.models.resnet18()
 # in_feat=model.fc.in_features
 # model.fc=torch.nn.Linear(in_feat,2)
-data_path='/data/datasets/asd/All_5split/01/val/TD/'
 # data_path='/data/datasets/ai_hub_sketch_4way/01/val/m_w'
 # data_path='/data/datasets/ai_hub/ai_hub_sketch_mw/01/val/w/'
 import random
@@ -490,7 +489,7 @@ if __name__=="__main__":
     plt.ylabel('y')
 
     # 그래프 제목 추가
-    plt.title(f'{num_correct}')
+    plt.title(f'{num_correct}/{len(dataset)}={num_correct/len(dataset)}')
     save_path = '/data/jong980812/project/mae/Shapley/binary_240_train/w'
     # 그래프 표시
     plt.savefig(os.path.join(save_path,f'{num_correct}_mytransform_binary.png'))
