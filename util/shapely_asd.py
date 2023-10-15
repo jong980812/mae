@@ -162,26 +162,26 @@ class shapley_part(Dataset):
             exit(0)
     def get_white_image(self,size):
         return Image.new("RGB", size, (255, 255, 255))
-    def get_empty_face(self,img, part_imgs, part_json):
-        '''
-        empty_face is face detached 'eye','nose','mouth','ear'
-        '''
-        head_json = part_json['head']
-        head_coords = self.get_coords(head_json)
-        head = part_imgs['head'][0]#!
-        white_image = self.get_white_image(img.size)
-        white_image.paste(head,head_coords[0])
-        for part in ['eye','nose','mouth','ear']:
-            if part_json[part] is not None:
-              part_coords= self.get_coords(part_json[part])
-              part_img = part_imgs[part]
-              if part in ['eye','ear']:   
-                  white_image.paste(self.get_white_image(part_img[0].size),part_coords[0])
-                  white_image.paste(self.get_white_image(part_img[1].size),part_coords[1])
-              else:
-                  white_image.paste(self.get_white_image(part_img[0].size),part_coords[0])
+    # def get_empty_face(self,img, part_imgs, part_json):
+    #     '''
+    #     empty_face is face detached 'eye','nose','mouth','ear'
+    #     '''
+    #     head_json = part_json['head']
+    #     head_coords = self.get_coords(head_json)
+    #     head = part_imgs['head'][0]#!
+    #     white_image = self.get_white_image(img.size)
+    #     white_image.paste(head,head_coords[0])
+    #     for part in ['eye','nose','mouth','ear']:
+    #         if part_json[part] is not None:
+    #           part_coords= self.get_coords(part_json[part])
+    #           part_img = part_imgs[part]
+    #           if part in ['eye','ear']:   
+    #               white_image.paste(self.get_white_image(part_img[0].size),part_coords[0])
+    #               white_image.paste(self.get_white_image(part_img[1].size),part_coords[1])
+    #           else:
+    #               white_image.paste(self.get_white_image(part_img[0].size),part_coords[0])
                   
-        return white_image 
+    #     return white_image 
     def get_empty_face(self,img, part_imgs, part_json):
         '''
         empty_face is face detached 'eye','nose','mouth','ear'
@@ -275,9 +275,9 @@ class shapley_part(Dataset):
         label = 0 if (img_path.split('/')[-1].split('.')[0].split('-')[0])=='A' else 1
         image = Image.open(img_path)
         part_name = self.part#["head", "eye", "nose", "ear", "mouth", "hand", "foot", "upper_body", "lower_body"]
-        if self.binary_thresholding:
-            image = image.convert("L")#! Convert grayscale
-            image = image.point(lambda p: p > self.binary_thresholding and 255)
+        # if self.binary_thresholding:
+        #     image = image.convert("L")#! Convert grayscale
+        #     image = image.point(lambda p: p > self.binary_thresholding and 255)
         part_json = self.get_part_json(os.path.join(self.json_folder,self.json_paths[idx]),part_name=part_name)
         part_imgs = {}
         for part in part_name:#모든 part를 다시 dict으로 리턴하기위함.
@@ -319,7 +319,7 @@ class shapley_part(Dataset):
 
 
 if __name__=="__main__":
-    transform= transforms.Compose([transforms.Resize((224,224)),transforms.ToTensor()])
+    transform= transforms.Compose([transforms.Resize((224,224)),transforms.ToTensor(),ThresholdTransform(240)])
     part_name = ["head", "eye", "nose", "ear", "mouth", "hand", "foot", "upper_body", "lower_body"]
     dataset = shapley_part('/data/jong980812/project/mae/util/shapley/TD','/data/jong980812/project/mae/util/shapley/TD',part_name,240,transform=transform)
     data_loader=DataLoader(dataset,5,num_workers=4)

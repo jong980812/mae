@@ -1,3 +1,4 @@
+from tqdm import tqdm
 import os
 import PIL
 from PIL import Image
@@ -22,18 +23,7 @@ data_path='/data/datasets/asd/All_5split/01/val/TD/'
 # data_path='/data/datasets/ai_hub_sketch_4way/01/val/m_w'
 # data_path='/data/datasets/ai_hub/ai_hub_sketch_mw/01/val/w/'
 import random
-weight='/data/jong980812/project/mae/result_ver2/All_5split/binary_240/OUT/02/checkpoint-29.pth'
-checkpoint = torch.load(weight, map_location='cpu')
-print("Load pre-trained checkpoint from: %s" % weight)
-checkpoint_model = checkpoint['model']
-state_dict = model.state_dict()
-msg = model.load_state_dict(checkpoint_model, strict=False)
-def set_conv_padding_mode(model, padding_mode='replicate'):
-  for name, layer in model.named_modules():
-      if isinstance(layer, torch.nn.Conv2d):
-          layer.padding_mode = padding_mode
-set_conv_padding_mode(model,padding_mode='replicate')
-model.eval()
+torch.manual_seed(77)
 def get_shapley_matrix(all_ordered_pair, correct_output):
     shapley_values = torch.zeros_like(all_ordered_pair, dtype=torch.float32)
 
@@ -112,27 +102,27 @@ def get_ordered_pair():
             # 결과를 weights에 저장
             weights[i, j] = weight
     return all_ordered_pair, weights
+
+    
+    
 class shapley_part(Dataset):
-    def __init__(self, data_folder, json_folder,part, binary_thresholding=None, transform=None):
+    def __init__(self, data_folder, json_folder, binary_thresholding=None, transform=None):
         self.json_folder = json_folder
         self.data_folder = data_folder
         self.binary_thresholding=binary_thresholding
         self.transform = transform
-        self.part = part
-        self.num_part = len(part)
         self.image_paths = [os.path.join(data_folder, f) for f in os.listdir(data_folder) if f.endswith(('.png', '.jpg', '.jpeg', '.gif'))]
         self.json_paths = [image_path.split('/')[-1].split('.')[0] + ".json" for image_path in self.image_paths] #! Get json path from image paths.
-        print(self.image_paths)
-    def get_part_json(self, json_file_path, part_name):
+        # print(self.image_paths)
+    def get_part_json(self, json_file_path):
         '''
         Get part dictionary from json path
         '''
         part_json = {}
-        
-        for part in part_name:
-            part_json[part] = []
         with open(json_file_path, 'r') as f:
             boxes = json.load(f)['shapes']
+            for box in boxes:
+                part_json[box["label"]]=[]
             for box in boxes:
                 part_json[box["label"]].append(box["points"])
     
@@ -159,193 +149,311 @@ class shapley_part(Dataset):
                 extracted_coordinates.append([xmin,ymin,xmax,ymax])
             return extracted_coordinates
         else:
-            exit(0)
+            for a in part: 
+                # print(a)
+                xmin, ymin = list(map(int,a[0]))
+                xmax, ymax = list(map(int,a[1]))
+                extracted_coordinates.append([xmin,ymin,xmax,ymax])
+            return extracted_coordinates
     def get_white_image(self,size):
         return Image.new("RGB", size, (255, 255, 255))
     def get_empty_face(self,img, part_imgs, part_json):
         '''
-        empty_face is face detached 'eye','nose','mouth','ear'
+        empty_face is face detached  'eye','nose','mouth','ear' from head+hair
         '''
-        head_json = part_json['head']
-        head_coords = self.get_coords(head_json)
+        head_coords = self.get_coords(part_json['head'])
         head = part_imgs['head'][0]#!
-        white_image = self.get_white_image(img.size)
-        white_image.paste(head,head_coords[0])
-        for part in ['eye','nose','mouth','ear']:
-            if part_json[part] is not None:
-              part_coords= self.get_coords(part_json[part])
-              part_img = part_imgs[part]
-              if part in ['eye','ear']:   
-                  white_image.paste(self.get_white_image(part_img[0].size),part_coords[0])
-                  white_image.paste(self.get_white_image(part_img[1].size),part_coords[1])
-              else:
-                  white_image.paste(self.get_white_image(part_img[0].size),part_coords[0])
-                  
-        return white_image 
-    def get_empty_face(self,img, part_imgs, part_json):
-        '''
-        empty_face is face detached 'eye','nose','mouth','ear'
-        '''
-        head_json = part_json['head']
-        head_coords = self.get_coords(head_json)
-        head = part_imgs['head'][0]#!
-        white_image = self.get_white_image(img.size)
-        white_image.paste(head,head_coords[0])
-        for part in ['eye','nose','mouth','ear']:
-            if part_json[part] is not None:
-              part_coords= self.get_coords(part_json[part])
-              part_img = part_imgs[part]
-              if part in ['eye','ear']:   
-                  white_image.paste(self.get_white_image(part_img[0].size),part_coords[0])
-                  white_image.paste(self.get_white_image(part_img[1].size),part_coords[1])
-              else:
-                  white_image.paste(self.get_white_image(part_img[0].size),part_coords[0])
-        # white_image.show()
-        return white_image
-    def get_empty_lower_body(self,img, part_imgs, part_json):
-        '''
-        empty_lower_body detacched foot
-        '''
-        lower_body_json = part_json['lower_body']
-        lower_body_coords = self.get_coords(lower_body_json)
-        lower_body = part_imgs['lower_body'][0]#!
-        white_image = self.get_white_image(img.size)
-        white_image.paste(lower_body,lower_body_coords[0])
-        if part_json["foot"] is not None:
-            part_coords= self.get_coords(part_json["foot"])
-            part_img = part_imgs["foot"] 
-            white_image.paste(self.get_white_image(part_img[0].size),part_coords[0])
-            white_image.paste(self.get_white_image(part_img[1].size),part_coords[1])
         
-        return white_image.crop(lower_body_coords[0])
+        hair_coords = self.get_coords(part_json['hair'])
+        hair = part_imgs['hair'][0]#!
+        white_image = self.get_white_image(img.size)
+        white_image.paste(head,head_coords[0])
+        white_image.paste(hair,hair_coords[0])
+        for part in ['eye','nose','mouth','ear']:
+            if part_json[part] is not None:
+                part_coords= self.get_coords(part_json[part])
+                part_img = part_imgs[part]
+                for i in range(len(part_img)):
+                    white_image.paste(self.get_white_image(part_img[i].size),part_coords[i])
+                  
+            #   if part in ['eye','ear']:   
+            #       white_image.paste(self.get_white_image(part_img[0].size),part_coords[0])
+            #       white_image.paste(self.get_white_image(part_img[1].size),part_coords[1])
+            #   else:
+            #       white_image.paste(self.get_white_image(part_img[0].size),part_coords[0])
+        # white_image.show()
+        xmins = [head_coords[0][0],hair_coords[0][0]]
+        ymins = [head_coords[0][1],hair_coords[0][1]]
+        xmaxs = [head_coords[0][2],hair_coords[0][2]]
+        ymaxs = [head_coords[0][3],hair_coords[0][3]]
+        empty_face_coords = [min(xmins),min(ymins), max(xmaxs), max(ymaxs)]
+            
+        return white_image.crop(empty_face_coords), [[min(xmins),min(ymins)],[max(xmaxs),max(ymaxs)]]
     def get_empty_upper_body(self,img, part_imgs, part_json):
         '''
         empty_lower_body detacched foot
+        upper body를 목 포함한 걸로 규정하고, 
+        1. 백지에 몸통 붙이기
+        2. 양 팔 붙이고 손떼기
+        3. 목 붙이기
+        4. 새로운 upperbody 좌표 규정.
         '''
-        upper_body_json = part_json['upper_body']
-        upper_body_coords = self.get_coords(upper_body_json)
-        upper_body = part_imgs['upper_body'][0]#!
-        white_image = self.get_white_image(img.size)
-        white_image.paste(upper_body,upper_body_coords[0])
+        white_image = Image.new("RGB", img.size, (255, 255, 255))
+        upper_body_else_arm_json = part_json['upper_body_else_arm']
+        upper_body_else_arm_coords = self.get_coords(upper_body_else_arm_json)
+        upper_body_else_arm = part_imgs['upper_body_else_arm'][0]#!
+        if part_json["neck"] is not None:
+            neck_json = part_json['neck']
+            neck_coords = self.get_coords(neck_json)
+            neck = part_imgs['neck'][0]#!
+            white_image.paste(neck,neck_coords[0])
+        neck_json = part_json['neck']
+        neck_coords = self.get_coords(neck_json)
+        neck = part_imgs['neck'][0]#!
+        arm_json = part_json['arm']
+        arm_coords = self.get_coords(arm_json)
+        arm_imgs= part_imgs['arm']#!
+        for i in range(len(arm_imgs)):
+            white_image.paste(arm_imgs[i],arm_coords[i])
+        
+        white_image.paste(upper_body_else_arm,upper_body_else_arm_coords[0])
+
+
+        # white_image.paste(left_hand,hand_coords[0])
+        # white_image.paste(right_hand,hand_coords[1])
         if part_json["hand"] is not None:
             part_coords= self.get_coords(part_json["hand"])
-            part_img = part_imgs["hand"] 
-            white_image.paste(self.get_white_image(part_img[0].size),part_coords[0])
-            white_image.paste(self.get_white_image(part_img[1].size),part_coords[1])
+            part_img = part_imgs["hand"]
+            for i in range(len(part_img)):
+                white_image.paste(Image.new("RGB", part_img[i].size, (255, 255, 255)),part_coords[i])
+                # white_image.paste(Image.new("RGB", part_img[1].size, (255, 255, 255)),part_coords[1])
+        xmins = [arm_coords[i][0] for i in range(len(arm_imgs))]
+        ymins = [arm_coords[i][1] for i in range(len(arm_imgs))]
+        xmaxs = [arm_coords[i][2] for i in range(len(arm_imgs))]
+        ymaxs = [upper_body_else_arm_coords[0][3]]#[arm_coords[i][3] for i in range(len(arm_imgs))]
+        if part_json['neck'] is not None:
+            ymins.append(neck_coords[0][1])
+        upper_body_coords = [min(xmins),min(ymins),max(xmaxs),max(ymaxs)]
+        
+        return white_image.crop(upper_body_coords), [[upper_body_coords[0],upper_body_coords[1]],[upper_body_coords[2],upper_body_coords[3]]]
+
+    def get_empty_lower_body(self,img, part_imgs, part_json):
+        '''
+        empty_lower_body detacched foot
+        leg 두개를 빈 도화지에 붙이고 발을 뗀뒤 empty lower body로 규정.
+        '''
+        white_image = self.get_white_image(img.size)
+        
+        leg_json = part_json['leg']
+        leg_coords = self.get_coords(leg_json)
+        leg_img= part_imgs['leg'] 
+        
+        pocket_json =  part_json['pocket']
+        pocket_coords = self.get_coords(pocket_json)
+        if len(leg_coords)!=2:
+            print('a')
+        for i in range(len(leg_coords)):
+            white_image.paste(leg_img[i],leg_coords[i])
+            # white_image.paste(leg_img[i],leg_coords[i])
+        # for i,pocket in enumerate(part_imgs['pocket']):
+        #     # pocket.show()
+        #     white_image.paste(pocket,pocket_coords[i])
+        # white_image.show()
+        if part_json["foot"] is not None:
+            part_coords= self.get_coords(part_json["foot"])
+            part_img = part_imgs["foot"] 
+            for i in range(len(part_img)):
+                white_image.paste(Image.new("RGB", part_img[i].size, (255, 255, 255)),part_coords[i])
+            # white_image.paste(self.get_white_image(part_img[1].size),part_coords[1])
+        # white_image.show()
         # white_image.crop(upper_body_coords[0]).show()
-        return white_image.crop(upper_body_coords[0])
+        # upper_body_ymax= self.get_coords(part_json["upper_body_else_arm"])[0][3] 
+        # pocket_ymin = min([pocket_coords[i][1] for i in range(len(part_imgs['pocket']))])
+        # leg_ymin = min(leg_coords[0][1],leg_coords[1][1])
+        xmins = [leg_coords[i][0] for i in range(len(leg_coords))]
+        # ymins = [pocket_ymin] if (upper_body_ymax<=pocket_ymin) and (leg_ymin>=pocket_ymin) else [leg_coords[0][1],leg_coords[1][1]]
+        ymins = [leg_coords[i][1] for i in range(len(leg_coords))]
+        xmaxs = [leg_coords[i][2] for i in range(len(leg_coords))]
+        ymaxs = [leg_coords[i][3] for i in range(len(leg_coords))]
+
+        lower_body_coords = [min(xmins),min(ymins),max(xmaxs),max(ymaxs)]
+        # white_image.crop(lower_body_coords).show()
+        return white_image.crop(lower_body_coords),[[min(xmins),min(ymins)],[max(xmaxs),max(ymaxs)]]
     
-    def create_new_images(self,img, binary_combination, part_imgs,part_json):
+    def create_new_images(self,img, binary_combination, part_imgs,part_json,label):
         #! Making New images
         original_img = img
         empty_face_active, eye_active, nose_active, ear_active, mouth_active, hand_active, foot_active = binary_combination
-        # New white image
-
-        new_image = self.get_white_image(original_img.size)
+        new_image = img.copy()
+        #! Original image에서 Lower body, Upperbody빼고 모두 없앰.
+        for i in range(len(part_imgs['empty_face'])):
+            new_image.paste(self.get_white_image(part_imgs['empty_face'][i].size),self.get_coords(part_json['empty_face'])[i])
+        for i in range(len(part_imgs['eye'])):
+            new_image.paste(self.get_white_image(part_imgs['eye'][i].size),self.get_coords(part_json['eye'])[i])
+        for i in range(len(part_imgs['nose'])):
+            new_image.paste(self.get_white_image(part_imgs['nose'][i].size),self.get_coords(part_json['nose'])[i])
+        for i in range(len(part_imgs['ear'])):
+            new_image.paste(self.get_white_image(part_imgs['ear'][i].size),self.get_coords(part_json['ear'])[i])
+        for i in range(len(part_imgs['mouth'])):
+            new_image.paste(self.get_white_image(part_imgs['mouth'][i].size),self.get_coords(part_json['mouth'])[i])
+        for i in range(len(part_imgs['hand'])):
+            new_image.paste(self.get_white_image(part_imgs['hand'][i].size),self.get_coords(part_json['hand'])[i])
+        for i in range(len(part_imgs['foot'])):
+            new_image.paste(self.get_white_image(part_imgs['foot'][i].size),self.get_coords(part_json['foot'])[i]) 
+        for i in range(len(part_imgs['hand'])):
+            new_image.paste(self.get_white_image(part_imgs['hand'][i].size),self.get_coords(part_json['hand'])[i]) 
+        for i in range(len(part_json['sneakers'])):
+            new_image.paste(self.get_white_image(part_imgs['sneakers'][i].size),self.get_coords(part_json['sneakers'])[i])
+        if part_json['sneakers'] is not None:
+            # print(part_json['sneakers'])
+            for i in range(len(part_json['sneakers'])):
+                new_image.paste(self.get_white_image(part_imgs['sneakers'][i].size),self.get_coords(part_json['sneakers'])[i])
+        if label == 0 and (part_json['man_shoes'] is not None):
+            for i in range(len(part_json['man_shoes'])):
+                new_image.paste(self.get_white_image(part_imgs['man_shoes'][i].size),self.get_coords(part_json['man_shoes'])[i])
+        elif label == 1 and (part_json['woman_shoes'] is not None):
+            for i in range(len(part_json['woman_shoes'])):
+                new_image.paste(self.get_white_image(part_imgs['woman_shoes'][i].size),self.get_coords(part_json['woman_shoes'])[i])
+        new_image.paste(part_imgs["empty_upper_body"][0], self.get_coords(part_json['empty_upper_body'])[0])  # 원하는 위치에 붙임
+          
+        #!######
+        
         if empty_face_active:
-            new_image.paste(part_imgs["empty_face"][0],(0,0))
-        # print(part_json['lower_body'][0])
-        # print(part_imgs["empty_lower_body"][0].size,self.get_coords(part_json['lower_body'])[0] )
-        new_image.paste(part_imgs["empty_lower_body"][0], self.get_coords(part_json['lower_body'])[0])  # 원하는 위치에 붙임
-        new_image.paste(part_imgs["empty_upper_body"][0], self.get_coords(part_json['upper_body'])[0])  # 원하는 위치에 붙임
+            new_image.paste(part_imgs["empty_face"][0],self.get_coords(part_json['empty_face'])[0])
         # 각 파트 이미지를 읽어와서 새로운 이미지에 붙임
         if eye_active and (part_json["eye"] is not None):
-            new_image.paste(part_imgs["eye"][0], self.get_coords(part_json['eye'])[0])  # 원하는 위치에 붙임
-            new_image.paste(part_imgs["eye"][1], self.get_coords(part_json['eye'])[1])  # 원하는 위치에 붙임 
+            for i in range(len(part_imgs["eye"])):
+                new_image.paste(part_imgs["eye"][i], self.get_coords(part_json['eye'])[i])  # 원하는 위치에 붙임
         if nose_active and (part_json["nose"] is not None):
-            new_image.paste(part_imgs["nose"][0], self.get_coords(part_json['nose'])[0])  # 원하는 위치에 붙임 
+            for i in range(len(part_imgs["nose"])):
+                new_image.paste(part_imgs["nose"][i], self.get_coords(part_json['nose'])[i])  # 원하는 위치에 붙임
         if ear_active and (part_json["ear"] is not None):
-            new_image.paste(part_imgs["ear"][0], self.get_coords(part_json['ear'])[0])  # 원하는 위치에 붙임 
-            new_image.paste(part_imgs["ear"][1], self.get_coords(part_json['ear'])[1])  # 원하는 위치에 붙임 
+            for i in range(len(part_imgs["ear"])):
+                new_image.paste(part_imgs["ear"][i], self.get_coords(part_json['ear'])[i])  # 원하는 위치에 붙임
         if mouth_active and (part_json["mouth"] is not None):
-            new_image.paste(part_imgs["mouth"][0], self.get_coords(part_json['mouth'])[0])  # 원하는 위치에 붙임 
+            for i in range(len(part_imgs["mouth"])):
+                new_image.paste(part_imgs["mouth"][i], self.get_coords(part_json['mouth'])[i])  # 원하는 위치에 붙임
         if hand_active and (part_json["hand"] is not None):
-            new_image.paste(part_imgs["hand"][0], self.get_coords(part_json['hand'])[0])  # 원하는 위치에 붙임 
-            new_image.paste(part_imgs["hand"][1], self.get_coords(part_json['hand'])[1])  # 원하는 위치에 붙임 
+            for i in range(len(part_imgs["hand"])):
+                new_image.paste(part_imgs["hand"][i], self.get_coords(part_json['hand'])[i])  # 원하는 위치에 붙임
         if foot_active and (part_json["foot"] is not None):
-            new_image.paste(part_imgs["foot"][0], self.get_coords(part_json['foot'])[0])  # 원하는 위치에 붙임 
-            new_image.paste(part_imgs["foot"][1], self.get_coords(part_json['foot'])[1])  # 원하는 위치에 붙임 
+            for i in range(len(part_imgs["foot"])):
+                new_image.paste(part_imgs["foot"][i], self.get_coords(part_json['foot'])[i])  # 원하는 위치에 붙임
         # 다른 파트들에 대해서도 같은 방식으로 처리
-        return new_image
+        return new_image.crop( self.get_coords(part_json['human_body'])[0])
     def __len__(self):
         return len(self.image_paths)
     def __getitem__(self, idx):
         img_path = self.image_paths[idx]
-        print(img_path)
-        label = 0 if (img_path.split('/')[-1].split('.')[0].split('-')[0])=='A' else 1
+        # print(img_path)
+        label = 0 if (img_path.split('/')[-1].split('.')[0].split('_')[0])=='m' else 1
         image = Image.open(img_path)
-        part_name = self.part#["head", "eye", "nose", "ear", "mouth", "hand", "foot", "upper_body", "lower_body"]
-        if self.binary_thresholding:
-            image = image.convert("L")#! Convert grayscale
-            image = image.point(lambda p: p > self.binary_thresholding and 255)
-        part_json = self.get_part_json(os.path.join(self.json_folder,self.json_paths[idx]),part_name=part_name)
+        part_name = ["human_body","face","head","hair", "neck","eye", "nose", "ear", "mouth","pocket","arm","hand", "leg","foot", "sneakers","upper_body_else_arm"]#원하는 파트
+        part_name.append('man_shoes') if label==0 else part_name.append('woman_shoes')
+        
+        # if self.binary_thresholding:
+            # image = image.convert("L")#! Convert grayscale
+            # image = image.point(lambda p: p > self.binary_thresholding and 255)
+        part_json = self.get_part_json(os.path.join(self.json_folder,self.json_paths[idx]))#! 존재하는 모든 part에 대해서 불러옴.
         part_imgs = {}
-        for part in part_name:#모든 part를 다시 dict으로 리턴하기위함.
+        for part in part_name:#모든 part를 잘라서 다시 dict으로 리턴하기위함.
             part_imgs[part]=[]
-            # print(part)
             coords = self.get_coords(part_json[part])
-            # print(coords)
             if coords is None:
                 part_imgs[part].append(None)    
-                
-            elif len(coords) ==1:
-                part_imgs[part].append(image.crop(coords[0]))    
-            elif len(coords) == 2:
-                part_imgs[part].append(image.crop(coords[0]))    
-                part_imgs[part].append(image.crop(coords[1]))    
-        empty_face = self.get_empty_face(image,part_imgs,part_json)
+            # elif len(coords) ==1:
+            #     part_imgs[part].append(image.crop(coords[0]))    
+            # elif len(coords) == 2:
+            #     part_imgs[part].append(image.crop(coords[0]))    
+            #     part_imgs[part].append(image.crop(coords[1]))
+            else:
+                for i in range(len(coords)):
+                    part_imgs[part].append(image.crop(coords[i]))    
+        empty_face , empty_face_coords= self.get_empty_face(image,part_imgs,part_json)
         # empty_face.show()
-        empty_upper_body = self.get_empty_upper_body(image,part_imgs,part_json)
-        empty_lower_body = self.get_empty_lower_body(image,part_imgs,part_json)
+        empty_upper_body, empty_upper_body_coords = self.get_empty_upper_body(image,part_imgs,part_json)
+        empty_lower_body, empty_lower_body_coords= self.get_empty_lower_body(image,part_imgs,part_json)
+        
         part_imgs['empty_face']=[empty_face]
+        part_json['empty_face']=[empty_face_coords]
         part_imgs['empty_lower_body']=[empty_lower_body]
+        part_json['empty_lower_body']=[empty_lower_body_coords]
         part_imgs['empty_upper_body']=[empty_upper_body]
+        part_json['empty_upper_body']=[empty_upper_body_coords]#좌표 바뀌어서 넣어줘야함.
         part_combinations = list(itertools.product([0, 1], repeat=7))
         new_imgs = []
+        # print(part_json)
         for combination in part_combinations:
             # print(combination)
-            new_img=self.create_new_images(img=image,binary_combination=combination, part_imgs=part_imgs,part_json=part_json)
+            new_img=self.create_new_images(img=image,binary_combination=combination, part_imgs=part_imgs,part_json=part_json,label=label)
             if self.transform:
-                new_img=self.transform(new_img)
+                new_img=self.transform(new_img).expand(3,-1,-1)
             new_imgs.append(new_img.unsqueeze(0))
         new_imgs = torch.cat(new_imgs,dim=0)
-        image = self.transform(image)
-        image_3ch = image.expand(3,-1,-1)
-        return new_imgs,image_3ch,label 
-    
-    
-
+        # image = self.transform(image)
+        # image_3ch = image.expand(3,-1,-1)
+        return new_imgs, new_imgs[-1], label 
 
 
 
 if __name__=="__main__":
-    transform= transforms.Compose([transforms.Resize((224,224)),transforms.ToTensor()])
-    part_name = ["head", "eye", "nose", "ear", "mouth", "hand", "foot", "upper_body", "lower_body"]
-    dataset = shapley_part('/data/jong980812/project/mae/util/shapley/TD','/data/jong980812/project/mae/util/shapley/TD',part_name,240,transform=transform)
-    data_loader=DataLoader(dataset,2,num_workers=4)
+    #! setting #!
+    transform = transforms.Compose([transforms.Resize((224,224)),
+                                   transforms.Grayscale(3),
+                                   transforms.ToTensor(),
+                                   ThresholdTransform(240)])
+    # weight='/data/jong980812/project/mae/result_ai_hub_all/drawer/bs256_1e-3_binary240_no_norm/OUT/01/checkpoint-4.pth'
+    weight= '/data/jong980812/project/mae/result_ai_hub_all/only_body/256_5e-4_binary_240_no_norm/OUT/01/checkpoint-18.pth' #! 96.89
+    data_path = '/local_datasets/ai_hub_sketch_mw/01/val/m'
+    
+    # load model    
+    checkpoint = torch.load(weight, map_location='cpu')
+    print("Load pre-trained checkpoint from: %s" % weight)
+    checkpoint_model = checkpoint['model']
+    state_dict = model.state_dict()
+    msg = model.load_state_dict(checkpoint_model, strict=False)
+    print(msg)
+    
+    # def set_conv_padding_mode(model, padding_mode='replicate'):
+    #   for name, layer in model.named_modules():
+    #       if isinstance(layer, torch.nn.Conv2d):
+    #           layer.padding_mode = padding_mode
+    # set_conv_padding_mode(model,padding_mode='replicate')
+    
+    # load dataset
+    print(data_path)
+    dataset = shapley_part(data_path,'/data/datasets/ai_hub_sketch_json_asd_version',240,transform=transform)
+    data_loader=DataLoader(dataset,10,shuffle=False,num_workers=8)
+    # print(dataset)
+    
+    # ready
+    model.eval()
+    part_name = ["human_body","face","head","hair", "neck","eye", "nose", "ear", "mouth","pocket","arm","hand", "leg","foot", "upper_body_else_arm"]#원하는 파트
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    
     all_ordered_pair,weights = get_ordered_pair()
     part_number = all_ordered_pair.shape[0]
     part_count = {i: 0 for i in range(part_number)}
+    
     num_correct = 0
-    for new_imgs,original_image,label in data_loader:
+    for new_imgs, original_image, label in tqdm(data_loader):
         # print(new_imgs.shape)
         input_data = new_imgs
         # print('complete')
         batch_size = input_data.shape[0]
         input_data = rearrange(input_data,  'b t c h w -> (b t) c h w')
         
-        
         model.to(device)
         input_data = input_data.to(device)
         original_image = original_image.to(device)
         label = label.to(device)
-        model.eval()
+
         with torch.no_grad():
             prediction = model(original_image)
-            output=model(input_data)
+            output = model(input_data)
+
         output = rearrange(output, '(b t) o -> b t o', b=batch_size) # batch_size, 128, output(2)
-        prediction = prediction.argmax(1)
+        prediction = prediction.argmax(dim=-1)
         # print(output.shape)
         # print(label)
         
@@ -360,4 +468,31 @@ if __name__=="__main__":
                 part_count[max_part_number] += 1
     print(part_count)
     print(num_correct)
+    print(num_correct/dataset.__len__())
+        
+    import matplotlib.pyplot as plt
+    # 주어진 딕셔너리
+    part=['Empty_face',"Eye","Nose","Ear","Mouth","Hand","Foot"]
+    data=part_count
+    data2={}
+    for i in range(7):
+        data2[part[i]]=list(data.values())[i]
+    # {0: 1139, 1: 5, 2: 3, 3: 47, 4: 5, 5: 5, 6: 2}
+    # 딕셔너리의 key와 value를 각각 리스트로 추출
+    x = list(data2.keys())
+    y = list(data2.values())
+
+    # 그래프 생성
+    plt.bar(x, y)
+
+    # x축과 y축에 라벨 추가
+    plt.xlabel('x')
+    plt.ylabel('y')
+
+    # 그래프 제목 추가
+    plt.title(f'{num_correct}')
+    save_path = '/data/jong980812/project/mae/Shapley/binary_240_train/w'
+    # 그래프 표시
+    plt.savefig(os.path.join(save_path,f'{num_correct}_mytransform_binary.png'))
+
         
