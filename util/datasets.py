@@ -111,14 +111,14 @@ def build_transform_aihub(is_train, args):
                 # transforms.RandomResizedCrop((224,224),scale=(0.2,1)),
                 transforms.Resize((224,224)),
                 # transforms.RandomInvert(1.),
-                # transforms.Grayscale(3),
+                transforms.Grayscale(3),
                 
                 # transforms.RandomRotation(degrees=(-10,10)),
                 transforms.RandomHorizontalFlip(0.5),
                 transforms.ToTensor(),
-                # ThresholdTransform(240)
-                # transforms.Normalize(mean=[0.5, 0.5, 0.5],
-                #                         std=[0.5, 0.5, 0.5])
+                ThresholdTransform(240),
+                transforms.Normalize(mean=[0.5, 0.5, 0.5],
+                                        std=[0.5, 0.5, 0.5])
                 ]),
                 'val': transforms.Compose([
                 # transforms.Resize((256,256)),
@@ -128,10 +128,10 @@ def build_transform_aihub(is_train, args):
                 
                 # transforms.RandomInvert(1.),
                 transforms.ToTensor(),
-                # ThresholdTransform(240)
+                ThresholdTransform(240),
                 
-                # transforms.Normalize(mean=[0.5, 0.5, 0.5],
-                #                         std=[0.5, 0.5, 0.5])
+                transforms.Normalize(mean=[0.5, 0.5, 0.5],
+                                        std=[0.5, 0.5, 0.5])
                 ])}
     
     return data_transforms['train'] if is_train else data_transforms['val'] # transforms.Compose(t) 

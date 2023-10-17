@@ -13,8 +13,7 @@ from einops import rearrange
 from itertools import product
 import math
 import torchvision.models as models
-model=models.efficientnet_b1(pretrained=True,progress=False)
-model.classifier[1] = torch.nn.Linear(1280, 2)
+
 import torchvision
 # model=torchvision.models.resnet18()
 # in_feat=model.fc.in_features
@@ -22,7 +21,7 @@ import torchvision
 # data_path='/data/datasets/ai_hub_sketch_4way/01/val/m_w'
 # data_path='/data/datasets/ai_hub/ai_hub_sketch_mw/01/val/w/'
 import random
-torch.manual_seed(77)
+
 def get_shapley_matrix(all_ordered_pair, correct_output):
     shapley_values = torch.zeros_like(all_ordered_pair, dtype=torch.float32)
 
@@ -279,7 +278,7 @@ class shapley_part(Dataset):
         # white_image.crop(lower_body_coords).show()
         return white_image.crop(lower_body_coords),[[min(xmins),min(ymins)],[max(xmaxs),max(ymaxs)]]
     
-    def create_new_images(self,img, binary_combination, part_imgs,part_json,label):
+    def create_new_images(self,img, binary_combination, part_imgs,part_json,sex):
         #! Making New images
         original_img = img
         empty_face_active, eye_active, nose_active, ear_active, mouth_active, hand_active, foot_active = binary_combination
@@ -307,10 +306,10 @@ class shapley_part(Dataset):
             # print(part_json['sneakers'])
             for i in range(len(part_json['sneakers'])):
                 new_image.paste(self.get_white_image(part_imgs['sneakers'][i].size),self.get_coords(part_json['sneakers'])[i])
-        if label == 0 and (part_json['man_shoes'] is not None):
+        if sex == 0 and (part_json['man_shoes'] is not None):
             for i in range(len(part_json['man_shoes'])):
                 new_image.paste(self.get_white_image(part_imgs['man_shoes'][i].size),self.get_coords(part_json['man_shoes'])[i])
-        elif label == 1 and (part_json['woman_shoes'] is not None):
+        elif sex == 1 and (part_json['woman_shoes'] is not None):
             for i in range(len(part_json['woman_shoes'])):
                 new_image.paste(self.get_white_image(part_imgs['woman_shoes'][i].size),self.get_coords(part_json['woman_shoes'])[i])
         new_image.paste(part_imgs["empty_upper_body"][0], self.get_coords(part_json['empty_upper_body'])[0])  # 원하는 위치에 붙임
@@ -345,10 +344,12 @@ class shapley_part(Dataset):
     def __getitem__(self, idx):
         img_path = self.image_paths[idx]
         # print(img_path)
-        label = 0 if (img_path.split('/')[-1].split('.')[0].split('_')[0])=='m' else 1
+        sex = 0 if (img_path.split('/')[-1].split('.')[0].split('_')[0])=='m' else 1
+        # label = 0 if (img_path.split('/')[-2])=='m' else 1
+        label = int(img_path.split('/')[-2])
         image = Image.open(img_path)
         part_name = ["human_body","face","head","hair", "neck","eye", "nose", "ear", "mouth","pocket","arm","hand", "leg","foot", "sneakers","upper_body_else_arm"]#원하는 파트
-        part_name.append('man_shoes') if label==0 else part_name.append('woman_shoes')
+        part_name.append('man_shoes') if sex==0 else part_name.append('woman_shoes')
         
         # if self.binary_thresholding:
             # image = image.convert("L")#! Convert grayscale
@@ -384,7 +385,7 @@ class shapley_part(Dataset):
         # print(part_json)
         for combination in part_combinations:
             # print(combination)
-            new_img=self.create_new_images(img=image,binary_combination=combination, part_imgs=part_imgs,part_json=part_json,label=label)
+            new_img=self.create_new_images(img=image,binary_combination=combination, part_imgs=part_imgs,part_json=part_json,sex=sex)
             if self.transform:
                 new_img=self.transform(new_img).expand(3,-1,-1)
             new_imgs.append(new_img.unsqueeze(0))
@@ -400,10 +401,23 @@ if __name__=="__main__":
     transform = transforms.Compose([transforms.Resize((224,224)),
                                    transforms.Grayscale(3),
                                    transforms.ToTensor(),
-                                   ThresholdTransform(240)])
-    # weight='/data/jong980812/project/mae/result_ai_hub_all/drawer/bs256_1e-3_binary240_no_norm/OUT/01/checkpoint-4.pth'
-    weight= '/data/jong980812/project/mae/result_ai_hub_all/only_body/256_5e-4_binary_240_no_norm/OUT/01/checkpoint-18.pth' #! 96.89
-    data_path = '/local_datasets/ai_hub_sketch_mw/01/val/m'
+                                   ThresholdTransform(240),
+                                    transforms.Normalize(mean=[0.5, 0.5, 0.5],
+                                        std=[0.5, 0.5, 0.5])
+                                   ])
+    
+    random_seed=777
+    torch.manual_seed(random_seed)
+    torch.backends.cudnn.deterministic = True
+    # torch.backends.cudnn.benchmark = False
+    np.random.seed(random_seed)
+    random.seed(random_seed)
+    
+    model=models.efficientnet_b1(pretrained=True,progress=False)
+    model.classifier[1] = torch.nn.Linear(1280, 5)
+    weight='/data/jong980812/project/mae/result_ai_hub_all/age/only_resize_no_norm_binary_240_0.5/OUT/01/checkpoint-29.pth'
+    # weight= '/data/jong980812/project/mae/result_ai_hub_all/age/only_resize_no_norm/OUT/01/checkpoint-29.pth' #! 96.89
+    data_path = '/local_datasets/ai_hub_sketch_age/01/val/4'
     
     # load model    
     checkpoint = torch.load(weight, map_location='cpu')
@@ -423,7 +437,7 @@ if __name__=="__main__":
     print(data_path)
     dataset = shapley_part(data_path,'/data/datasets/ai_hub_sketch_json_asd_version',240,transform=transform)
     data_loader=DataLoader(dataset,10,shuffle=False,num_workers=8)
-    # print(dataset)
+    print(dataset)
     
     # ready
     model.eval()
@@ -489,9 +503,9 @@ if __name__=="__main__":
     plt.ylabel('y')
 
     # 그래프 제목 추가
-    plt.title(f'{num_correct}/{len(dataset)}={num_correct/len(dataset)}')
-    save_path = '/data/jong980812/project/mae/Shapley/binary_240_train/w'
+    plt.title(f'{num_correct}/{len(dataset)}={num_correct/len(dataset)*100}%')
+    save_path = '/data/jong980812/project/mae/Shapley'
     # 그래프 표시
-    plt.savefig(os.path.join(save_path,f'{num_correct}_mytransform_binary.png'))
+    plt.savefig(os.path.join(save_path,f'{num_correct}age_4_nonorm_binary.png'))
 
         
