@@ -103,10 +103,92 @@ def get_ordered_pair():
 
     
     
+def get_shapley_matrix(all_ordered_pair, correct_output):
+    shapley_values = torch.zeros_like(all_ordered_pair, dtype=torch.float32)
+
+    # 각 ordered pair에 대한 값을 가져와 shapley_values에 저장
+    for a,ordered_pairs in enumerate(all_ordered_pair):
+        for i, ordered_pair in enumerate(ordered_pairs):
+            # ordered_pair를 인덱스로 사용하여 correct_output에서 값을 가져옴
+            indices = ordered_pair  # ordered_pair를 텐서로 변환
+            # print(indices)
+            values1 = correct_output[int(indices[0])]
+            values2 = correct_output[int(indices[1])]  # correct_output에서 해당 위치의 값 가져오기
+            # print(values1,values2)
+            shapley_values[a,i] = torch.cat([values1.unsqueeze(0),values2.unsqueeze(0)],dim=0)
+    return shapley_values
+def binary_to_decimal(binary_tuple):
+    decimal_value = 0
+    binary_length = len(binary_tuple)
+
+    for i, bit in enumerate(binary_tuple):
+        decimal_value += bit * (2 ** (binary_length - i - 1))
+
+    return decimal_value
+def decimal_to_binary(decimal_value, num_bits):
+    binary_tuple = []
+    
+    for i in range(num_bits):
+        bit = (decimal_value >> (num_bits - i - 1)) & 1
+        binary_tuple.append(bit)
+    
+    return tuple(binary_tuple)
+def count_ones(binary_tuple):
+    count = 0
+    for bit in binary_tuple:
+        if bit == 1:
+            count += 1
+    return count
+def get_ordered_pair():
+
+    n = 6  # digit의 개수
+    digits = [0, 1]  # 각 digit의 가능한 값
+
+    # 경우의 수 생성
+    part_combinations = list(product(digits, repeat=n))
+
+
+    index_to_insert = 1  # 두 번째 위치에 추가하려면 인덱스 1을 사용합니다.
+    all_ordered_pair=[]
+    for index in range(7):
+        ordered_pair=[] 
+        index_to_insert = index
+        for combi in part_combinations:
+            insert_value = [0,1]
+            new_combi_0= combi[:index_to_insert] + (insert_value[0],) + combi[index_to_insert:]
+            new_combi_1= combi[:index_to_insert] + (insert_value[1],) + combi[index_to_insert:]
+            ordered_pair.append([binary_to_decimal(new_combi_0),binary_to_decimal(new_combi_1)])
+        all_ordered_pair.append(ordered_pair)
+    all_ordered_pair=torch.Tensor(all_ordered_pair)
+    num_part = (all_ordered_pair.shape[0])
+    num_case = (all_ordered_pair.shape[1])
+    weights = torch.zeros((num_part,num_case))
+    for i in range(num_part):
+        for j in range(num_case):
+            # all_ordered_pair의 값 가져오기
+            value = int(all_ordered_pair[i, j, 1])
+            
+            # 이진수로 변환
+            binary_value = decimal_to_binary(value, 7)
+            
+            # 1의 개수 세기
+            num_ones = binary_value.count(1)
+            
+            # num * (7 combination num) 계산
+            combination = math.comb(num_part,num_ones)
+            weight = num_ones * combination
+            
+            # 결과를 weights에 저장
+            weights[i, j] = weight
+    return all_ordered_pair, weights
+
+    
+    
 class shapley_part(Dataset):
-    def __init__(self, data_folder, json_folder, binary_thresholding=None, transform=None):
+    def __init__(self, data_folder, json_folder, task,binary_thresholding=None, transform=None):
         self.json_folder = json_folder
         self.data_folder = data_folder
+        self.task = task
         self.binary_thresholding=binary_thresholding
         self.transform = transform
         self.image_paths = [os.path.join(data_folder, f) for f in os.listdir(data_folder) if f.endswith(('.png', '.jpg', '.jpeg', '.gif'))]
@@ -155,6 +237,34 @@ class shapley_part(Dataset):
             return extracted_coordinates
     def get_white_image(self,size):
         return Image.new("RGB", size, (255, 255, 255))
+    def get_only_hair(self,img,part_imgs,part_json):
+        head_coords = self.get_coords(part_json['head'])
+        head = part_imgs['head'][0]#!
+        hair_coords = self.get_coords(part_json['hair'])
+        hair = part_imgs['hair'][0]#!
+        face_coords = self.get_coords(part_json['face'])
+        face = part_imgs['face'][0]
+        neck_coords = self.get_coords(part_json['neck'])
+        neck = part_imgs['neck'][0]
+        white_image = self.get_white_image(img.size)
+        white_image.paste(hair,hair_coords[0])
+        white_image.paste(self.get_white_image(face.size),face_coords[0])
+        white_image.paste(self.get_white_image(neck.size),neck_coords[0])
+        return white_image.crop(hair_coords[0]), [[hair_coords[0][0],hair_coords[0][1]],[hair_coords[0][2],hair_coords[0][3]]]
+    def get_only_face(self,img,part_imgs,part_json):
+        face_coords = self.get_coords(part_json['face'])
+        face = part_imgs['face'][0]
+
+        white_image = self.get_white_image(img.size)
+        white_image.paste(face,face_coords[0])
+
+        for part in ['eye','nose','mouth','ear']:
+                    if part_json[part] is not None:
+                        part_coords= self.get_coords(part_json[part])
+                        part_img = part_imgs[part]
+                        for i in range(len(part_img)):
+                            white_image.paste(self.get_white_image(part_img[i].size),part_coords[i])
+        return white_image.crop(face_coords[0]), [[face_coords[0][0],face_coords[0][1]],[face_coords[0][2],face_coords[0][3]]]
     def get_empty_face(self,img, part_imgs, part_json):
         '''
         empty_face is face detached  'eye','nose','mouth','ear' from head+hair
@@ -313,11 +423,17 @@ class shapley_part(Dataset):
             for i in range(len(part_json['woman_shoes'])):
                 new_image.paste(self.get_white_image(part_imgs['woman_shoes'][i].size),self.get_coords(part_json['woman_shoes'])[i])
         new_image.paste(part_imgs["empty_upper_body"][0], self.get_coords(part_json['empty_upper_body'])[0])  # 원하는 위치에 붙임
+        new_image.paste(part_imgs["only_face"][0], self.get_coords(part_json['only_face'])[0])  # 원하는 위치에 붙임
+
           
         #!######
         
         if empty_face_active:
-            new_image.paste(part_imgs["empty_face"][0],self.get_coords(part_json['empty_face'])[0])
+            # new_image.paste(part_imgs["empty_face"][0],self.get_coords(part_json['empty_face'])[0])
+            new_image.paste(part_imgs["only_hair"][0],self.get_coords(part_json['only_hair'])[0])
+            new_image.paste(part_imgs["only_face"][0], self.get_coords(part_json['only_face'])[0])  # 원하는 위치에 붙임
+            new_image.paste(part_imgs["neck"][0], self.get_coords(part_json['neck'])[0])  # 원하는 위치에 붙임
+            
         # 각 파트 이미지를 읽어와서 새로운 이미지에 붙임
         if eye_active and (part_json["eye"] is not None):
             for i in range(len(part_imgs["eye"])):
@@ -345,8 +461,16 @@ class shapley_part(Dataset):
         img_path = self.image_paths[idx]
         # print(img_path)
         sex = 0 if (img_path.split('/')[-1].split('.')[0].split('_')[0])=='m' else 1
-        # label = 0 if (img_path.split('/')[-2])=='m' else 1
-        label = int(img_path.split('/')[-2])
+        if self.task == 'mw':
+            label = 0 if (img_path.split('/')[-2])=='m' else 1
+        elif self.task == 'drawer':
+            label = 0 if (img_path.split('/')[-2])=='m' else 1
+        elif self.task == '4way':
+            labe_list ={'m_m': 0, 'm_w': 1, 'w_m': 2, 'w_w': 3}
+            label = labe_list[(img_path.split('/')[-2])]
+        elif self.task == 'age':
+            label = int(img_path.split('/')[-2])
+            
         image = Image.open(img_path)
         part_name = ["human_body","face","head","hair", "neck","eye", "nose", "ear", "mouth","pocket","arm","hand", "leg","foot", "sneakers","upper_body_else_arm"]#원하는 파트
         part_name.append('man_shoes') if sex==0 else part_name.append('woman_shoes')
@@ -373,13 +497,20 @@ class shapley_part(Dataset):
         # empty_face.show()
         empty_upper_body, empty_upper_body_coords = self.get_empty_upper_body(image,part_imgs,part_json)
         empty_lower_body, empty_lower_body_coords= self.get_empty_lower_body(image,part_imgs,part_json)
-        
+        only_hair, only_hair_coords = self.get_only_hair(image,part_imgs,part_json)
+        only_face, only_face_coords = self.get_only_face(image,part_imgs,part_json)
         part_imgs['empty_face']=[empty_face]
         part_json['empty_face']=[empty_face_coords]
         part_imgs['empty_lower_body']=[empty_lower_body]
         part_json['empty_lower_body']=[empty_lower_body_coords]
         part_imgs['empty_upper_body']=[empty_upper_body]
         part_json['empty_upper_body']=[empty_upper_body_coords]#좌표 바뀌어서 넣어줘야함.
+        part_imgs['only_hair']=[only_hair]
+        part_json['only_hair']=[only_hair_coords]        
+        part_imgs['only_face']=[only_face]
+        part_json['only_face']=[only_face_coords]
+        original_image=image.crop( self.get_coords(part_json['human_body'])[0])
+        
         part_combinations = list(itertools.product([0, 1], repeat=7))
         new_imgs = []
         # print(part_json)
@@ -392,18 +523,18 @@ class shapley_part(Dataset):
         new_imgs = torch.cat(new_imgs,dim=0)
         # image = self.transform(image)
         # image_3ch = image.expand(3,-1,-1)
-        return new_imgs, new_imgs[-1], label 
+        return new_imgs, self.transform(original_image), label 
 
 
 
 if __name__=="__main__":
     #! setting #!
-    transform = transforms.Compose([transforms.Resize((224,224)),
+    transform = transforms.Compose([transforms.Resize((224,168)),
                                    transforms.Grayscale(3),
                                    transforms.ToTensor(),
-                                   ThresholdTransform(240),
-                                    transforms.Normalize(mean=[0.5, 0.5, 0.5],
-                                        std=[0.5, 0.5, 0.5])
+                                   ThresholdTransform(250),
+                                    transforms.Normalize(mean=[0.98, 0.98, 0.98],
+                                    std=[0.065, 0.065, 0.065])
                                    ])
     
     random_seed=777
@@ -415,10 +546,11 @@ if __name__=="__main__":
     
     model=models.efficientnet_b1(pretrained=True,progress=False)
     model.classifier[1] = torch.nn.Linear(1280, 5)
-    weight='/data/jong980812/project/mae/result_ai_hub_all/age/only_resize_no_norm_binary_240_0.5/OUT/01/checkpoint-29.pth'
+    weight='/data/jong980812/project/mae/result_after_shapley/age/binary_240_0.98_224168/OUT/01/checkpoint-29.pth'
     # weight= '/data/jong980812/project/mae/result_ai_hub_all/age/only_resize_no_norm/OUT/01/checkpoint-29.pth' #! 96.89
-    data_path = '/local_datasets/ai_hub_sketch_age/01/val/4'
-    
+    data_path = '/local_datasets/ai_hub/ai_hub_sketch_age/01/val/4'
+    task = data_path.split('/')[3].split('_')[-1] 
+    class_name = data_path.split('/')[-1]
     # load model    
     checkpoint = torch.load(weight, map_location='cpu')
     print("Load pre-trained checkpoint from: %s" % weight)
@@ -435,7 +567,7 @@ if __name__=="__main__":
     
     # load dataset
     print(data_path)
-    dataset = shapley_part(data_path,'/data/datasets/ai_hub_sketch_json_asd_version',240,transform=transform)
+    dataset = shapley_part(data_path,'/data/datasets/ai_hub_sketch_json_asd_version',task=task,binary_thresholding=240,transform=transform)
     data_loader=DataLoader(dataset,10,shuffle=False,num_workers=8)
     print(dataset)
     
@@ -485,7 +617,7 @@ if __name__=="__main__":
         
     import matplotlib.pyplot as plt
     # 주어진 딕셔너리
-    part=['Empty_face',"Eye","Nose","Ear","Mouth","Hand","Foot"]
+    part=['Hair',"Eye","Nose","Ear","Mouth","Hand","Foot"]
     data=part_count
     data2={}
     for i in range(7):
@@ -503,9 +635,11 @@ if __name__=="__main__":
     plt.ylabel('y')
 
     # 그래프 제목 추가
-    plt.title(f'{num_correct}/{len(dataset)}={num_correct/len(dataset)*100}%')
+    # plt.title(f'{num_correct}/{len(dataset)}={num_correct/len(dataset)*100}%')
+    plt.title(f'{task} task  : {class_name} samples\n{num_correct}/{len(dataset)}={num_correct/len(dataset)*100:.2f}%')
+    
     save_path = '/data/jong980812/project/mae/Shapley'
     # 그래프 표시
-    plt.savefig(os.path.join(save_path,f'{num_correct}age_4_nonorm_binary.png'))
+    plt.savefig(os.path.join(save_path,f'{task}_{class_name}_250_0.98_binary.png'))
 
         

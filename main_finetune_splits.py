@@ -53,8 +53,7 @@ def get_args_parser():
     parser.add_argument('--model', default='vit_large_patch16', type=str, metavar='MODEL',
                         help='Name of model to train')
 
-    parser.add_argument('--input_size', default=224, type=int,
-                        help='images input size')
+
 
     parser.add_argument('--drop_path', type=float, default=0.1, metavar='PCT',
                         help='Drop path rate (default: 0.1)')
@@ -166,6 +165,10 @@ def get_args_parser():
     parser.add_argument('--dropout', default=0.2,type=float)
     parser.add_argument('--stochastic_depth_prob',default=0.2,type=float)
     parser.add_argument('--padding_mode',default='zeros',type=str)
+    parser.add_argument('--input_size', nargs=2, type=int, metavar=('H', 'W'), 
+                    help='Height, width')
+    parser.add_argument('--th', default=10, type=int,help='threshold value')
+    
     
     return parser
 
