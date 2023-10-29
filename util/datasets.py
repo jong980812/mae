@@ -15,7 +15,7 @@ from torchvision import datasets, transforms
 from timm.data import create_transform
 from timm.data.constants import IMAGENET_DEFAULT_MEAN, IMAGENET_DEFAULT_STD
 from util.custom_transform import ThresholdTransform,AddNoise,DetachWhite
-
+from .stanford_car import Stanford_car
 def build_dataset(is_train, args):
     # if args.dataset == 'asd_part_based' :
     #     mode = "train" if is_train else "val"
@@ -30,8 +30,12 @@ def build_dataset(is_train, args):
         transform = build_transform_DAPT(is_train, args)
     # elif args.dataset == 'aihub':
     #     transform = build_transform_aihub(is_train, args)
-    elif args.dataset == 'car':
-        transform = buil_transform_car(is_train,args)
+    elif args.dataset == 'stanford_car':
+        transform = build_transform_car(is_train,args)
+        dataset = Stanford_car(transform,is_train,args)
+        print(dataset)
+        
+        return dataset
     elif args.dataset == 'pcb_asd':
         transform = build_transform_pcb_asd(is_train, args)
     elif args.dataset == 'sketch_imagenet':    
@@ -112,7 +116,7 @@ def build_transform_asd(is_train, args):
                 ])}
     
     return data_transforms['train'] if is_train else data_transforms['val'] # transforms.Compose(t)
-def buil_transform_car(is_train,args):
+def build_transform_car(is_train,args):
     data_transforms = {
         'train': transforms.Compose([
             transforms.Resize(args.input_size),

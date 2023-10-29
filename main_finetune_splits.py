@@ -122,6 +122,7 @@ def get_args_parser():
     parser.add_argument('--data_path', default='/datasets01/imagenet_full_size/061417/', type=str,
                         help='dataset path')
     parser.add_argument('--json_path', default='/data/datasets/asd/All_5split_annotations', type=str)
+    parser.add_argument('--anno_path', default='', type=str)
     parser.add_argument('--part_type', default='head', choices=['head', 'upper_body', 'lower_body'], type=str)
     parser.add_argument('--nb_classes', default=1000, type=int,
                         help='number of the classification types')
@@ -258,11 +259,12 @@ def main(args):
         )
         trunc_normal_(model.head.weight, std=0.002)
         # assert args.finetune is None, "Original vit has already pretrained weight"
-    elif 'resnet' in args.model:
-        model= models_vit.__dict__[args.model](
-        num_classes=args.nb_classes,
-        pretrained=True if args.finetune is None else False,
-        )
+    elif args.model == 'resnet50':
+        model= models.resnet50(pretrained=True)
+        in_features = model.fc.in_features
+        model.fc = torch.nn.Identity()  # 또는 resnet.fc = nn.Sequential()
+        classification_head = torch.nn.Linear(in_features, args.nb_classes)
+        model.fc = classification_head
         trunc_normal_(model.fc.weight, std=2e-3)
     elif 'efficient' == args.model:
         model=models.efficientnet_b1(pretrained=True)
@@ -409,6 +411,7 @@ def main(args):
             misc.save_model(
                 args=args, model=model, model_without_ddp=model_without_ddp, optimizer=optimizer,
                 loss_scaler=loss_scaler, epoch=epoch)
+
 
         test_stats = evaluate(data_loader_val, model, device)
         print(f"Accuracy of the network on the {len(dataset_val)} test images: {test_stats['acc1']:.1f}%")
